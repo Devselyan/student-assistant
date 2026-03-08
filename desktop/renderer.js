@@ -1013,25 +1013,52 @@ function showClassesAtLocation(location) {
     return;
   }
   
-  // Show in a modal
-  const modal = document.getElementById('locationClassesModal');
-  const title = document.getElementById('locationClassesTitle');
-  const content = document.getElementById('locationClassesContent');
+  // Create a new window with the location classes
+  const win = window.open('', '_blank', 'width=600,height=700');
   
-  title.textContent = `📍 Classes at ${location}`;
-  content.innerHTML = classesAtLocation.map(cls => `
-    <div class="class-card" style="margin-bottom: 15px; border-left-color: ${cls.color || 'var(--primary-color)'}">
-      <h3>${escapeHtml(cls.name)}</h3>
-      ${cls.teacher ? `<p style="color: var(--text-secondary); margin-bottom: 8px;">👨‍🏫 ${escapeHtml(cls.teacher)}</p>` : ''}
-      <div class="class-details">
-        <span class="class-detail-item">⏰ ${cls.startTime} - ${cls.endTime}</span>
-        <span class="class-detail-item">${cls.days.join(', ')}</span>
+  const classesHtml = classesAtLocation.map(cls => `
+    <div style="background: #f7fafc; border-left: 4px solid ${cls.color || '#667eea'}; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+      <h3 style="margin: 0 0 8px 0; color: #1a202c;">${escapeHtml(cls.name)}</h3>
+      ${cls.teacher ? `<p style="margin: 0 0 8px 0; color: #4a5568;">👨‍🏫 ${escapeHtml(cls.teacher)}</p>` : ''}
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.85rem;">
+        <span style="background: #edf2f7; padding: 4px 10px; border-radius: 20px;">⏰ ${cls.startTime} - ${cls.endTime}</span>
+        <span style="background: #edf2f7; padding: 4px 10px; border-radius: 20px;">${cls.days.join(', ')}</span>
       </div>
-      ${cls.description ? `<p style="margin-top: 10px; font-size: 0.9rem; color: var(--text-secondary);">${escapeHtml(cls.description)}</p>` : ''}
+      ${cls.description ? `<p style="margin-top: 10px; font-size: 0.9rem; color: #718096;">${escapeHtml(cls.description)}</p>` : ''}
     </div>
   `).join('');
   
-  openModal('locationClassesModal');
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>📍 Classes at ${location}</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          padding: 20px;
+          background: #f7fafc;
+          color: #1a202c;
+        }
+        h1 {
+          color: #667eea;
+          margin-bottom: 20px;
+        }
+        .count {
+          color: #4a5568;
+          margin-bottom: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>📍 Classes at ${location}</h1>
+      <p class="count">${classesAtLocation.length} class(es) at this location</p>
+      ${classesHtml}
+    </body>
+    </html>
+  `);
+  
+  win.document.close();
 }
 
 // ==================== TIMER ====================

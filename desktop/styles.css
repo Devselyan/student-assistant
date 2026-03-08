@@ -512,9 +512,15 @@ form {
   border-radius: 20px;
 }
 
+.class-detail-item.location-link {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
 .class-detail-item.location-link:hover {
   background: var(--primary-color);
-  color: white;
+  color: #ffffff;
+  text-decoration: underline;
 }
 
 .class-actions {

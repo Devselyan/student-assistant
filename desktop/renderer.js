@@ -183,12 +183,12 @@ function setupEventListeners() {
   document.getElementById('addNoteBtn')?.addEventListener('click', () => openModal('noteModal'));
   document.getElementById('addTaskBtn')?.addEventListener('click', () => openModal('taskModal'));
 
-  // CSV Import
+  // CSV/ICS Import
   document.getElementById('importCsvBtn')?.addEventListener('click', () => {
-    document.getElementById('csvFileInput')?.click();
+    document.getElementById('importFileInput')?.click();
   });
 
-  document.getElementById('csvFileInput')?.addEventListener('change', handleCsvImport);
+  document.getElementById('importFileInput')?.addEventListener('change', handleFileImport);
 
   // CSV Import confirmation
   document.getElementById('confirmImportBtn')?.addEventListener('click', () => {
@@ -384,27 +384,126 @@ function handleTaskSubmit(e) {
   form.reset();
 }
 
-// ==================== CSV IMPORT ====================
-function handleCsvImport(e) {
+// ==================== FILE IMPORT (CSV & ICS) ====================
+function handleFileImport(e) {
   const file = e.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
   reader.onload = (event) => {
     try {
-      const classes = parseCSV(event.target.result);
+      const content = event.target.result;
+      let classes = [];
+      
+      if (file.name.toLowerCase().endsWith('.ics')) {
+        classes = parseICS(content);
+      } else if (file.name.toLowerCase().endsWith('.csv')) {
+        classes = parseCSV(content);
+      } else {
+        alert('Please select a .csv or .ics file');
+        return;
+      }
+      
       if (classes.length === 0) {
-        alert('No valid classes found in CSV.');
+        alert('No valid classes found in file.');
         return;
       }
       pendingImportClasses = classes;
       showCsvPreview(classes);
     } catch (err) {
-      alert('Error parsing CSV: ' + err.message);
+      alert('Error parsing file: ' + err.message);
     }
   };
   reader.readAsText(file);
   e.target.value = '';
+}
+
+function parseICS(icsText) {
+  const classes = [];
+  const events = icsText.split('BEGIN:VEVENT').slice(1);
+  
+  events.forEach(event => {
+    const summary = extractICSField(event, 'SUMMARY');
+    const dtstart = extractICSField(event, 'DTSTART');
+    const dtend = extractICSField(event, 'DTEND');
+    const location = extractICSField(event, 'LOCATION') || 'Online';
+    const description = extractICSField(event, 'DESCRIPTION') || '';
+    const rrule = extractICSField(event, 'RRULE');
+    
+    if (!summary || !dtstart || !dtend) return;
+    
+    // Parse days from RRULE (BYDAY=MO,TU,WE,TH,FR)
+    let days = [];
+    if (rrule && rrule.includes('BYDAY=')) {
+      const byDay = rrule.match(/BYDAY=([^\n;]+)/)?.[1] || '';
+      const dayMap = { 'MO': 'Monday', 'TU': 'Tuesday', 'WE': 'Wednesday', 'TH': 'Thursday', 'FR': 'Friday', 'SA': 'Saturday', 'SU': 'Sunday' };
+      byDay.split(',').forEach(d => {
+        const day = dayMap[d.trim()];
+        if (day) days.push(day);
+      });
+    }
+    
+    // If no days specified, try to infer from date
+    if (days.length === 0) {
+      const dateObj = parseICSDate(dtstart);
+      if (dateObj) {
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        days = [dayNames[dateObj.getDay()]];
+      }
+    }
+    
+    const startTime = formatICSTime(dtstart);
+    const endTime = formatICSTime(dtend);
+    
+    if (summary && startTime && endTime && days.length > 0) {
+      classes.push({
+        id: Date.now().toString() + classes.length,
+        name: summary,
+        teacher: '',
+        startTime,
+        endTime,
+        location: location || 'Online',
+        description: description || '',
+        days: days,
+        color: '#667eea',
+        reminderMinutes: 15
+      });
+    }
+  });
+  
+  return classes;
+}
+
+function extractICSField(event, fieldName) {
+  const regex = new RegExp(`${fieldName}[:;]([^\\n]+)`, 'i');
+  const match = event.match(regex);
+  return match ? match[1].trim() : '';
+}
+
+function parseICSDate(dateStr) {
+  if (!dateStr) return null;
+  // Format: 20240115T090000 or 20240115
+  const year = parseInt(dateStr.substring(0, 4));
+  const month = parseInt(dateStr.substring(4, 6)) - 1;
+  const day = parseInt(dateStr.substring(6, 8));
+  
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  
+  return new Date(year, month, day);
+}
+
+function formatICSTime(dateStr) {
+  if (!dateStr) return '';
+  // Format: 20240115T090000
+  if (dateStr.length >= 9 && dateStr.includes('T')) {
+    const timePart = dateStr.split('T')[1];
+    if (timePart && timePart.length >= 4) {
+      const hours = timePart.substring(0, 2);
+      const minutes = timePart.substring(2, 4);
+      return `${hours}:${minutes}`;
+    }
+  }
+  return '';
 }
 
 function parseCSV(csvText) {

@@ -106,13 +106,24 @@ function switchView(viewName) {
 
 // ==================== MODALS ====================
 function setupModals() {
-  // Close modal when clicking overlay or close button
+  // Close modal when clicking overlay, close button, or cancel button
   document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal-overlay')) {
-      closeModal(e.target.closest('.modal'));
+    const target = e.target;
+    console.log('Click detected on:', target.tagName, target.className, target.getAttribute('data-modal'));
+
+    // Close on overlay click
+    if (target.classList.contains('modal-overlay')) {
+      closeModal(target.closest('.modal'));
     }
-    if (e.target.classList.contains('modal-close')) {
-      closeModal(e.target.closest('.modal'));
+    // Close on X button click
+    if (target.classList.contains('modal-close')) {
+      closeModal(target.closest('.modal'));
+    }
+    // Close on cancel button click (data-modal attribute)
+    if (target.hasAttribute('data-modal')) {
+      const modalId = target.getAttribute('data-modal');
+      console.log('Closing modal:', modalId);
+      closeModal(modalId);
     }
   });
 

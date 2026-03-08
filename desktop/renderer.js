@@ -443,7 +443,7 @@ function renderDashboard() {
         <h3>${escapeHtml(cls.name)}</h3>
         <div class="class-details">
           <span class="class-detail-item">⏰ ${cls.startTime} - ${cls.endTime}</span>
-          <span class="class-detail-item">📍 ${escapeHtml(cls.location || 'Online')}</span>
+          <span class="class-detail-item"> ${escapeHtml(cls.location || 'Online')}</span>
         </div>
       </div>
     `).join('');
@@ -501,11 +501,11 @@ function renderClasses() {
   grid.innerHTML = appData.classes.map(cls => `
     <div class="class-card" style="border-left-color: ${cls.color || 'var(--primary-color)'}">
       <h3>${escapeHtml(cls.name)}</h3>
-      ${cls.teacher ? `<p style="color: var(--text-secondary); margin-bottom: 8px;">👨‍🏫 ${escapeHtml(cls.teacher)}</p>` : ''}
+      ${cls.teacher ? `<p style="color: var(--text-secondary); margin-bottom: 8px;"> ${escapeHtml(cls.teacher)}</p>` : ''}
       <div class="class-details">
         <span class="class-detail-item">⏰ ${cls.startTime} - ${cls.endTime}</span>
-        <span class="class-detail-item">📍 ${escapeHtml(cls.location || 'Online')}</span>
-        <span class="class-detail-item">🔔 ${cls.reminderMinutes}min before</span>
+        <span class="class-detail-item"> ${escapeHtml(cls.location || 'Online')}</span>
+        <span class="class-detail-item"> ${cls.reminderMinutes}min before</span>
       </div>
       <div class="class-details" style="margin-top: 8px;">
         <span class="class-detail-item">${cls.days.join(', ')}</span>
@@ -571,7 +571,7 @@ function renderCalendar() {
     
     dayEvents.slice(0, 3).forEach(e => {
       html += `<div class="calendar-event" style="background: ${e.color};" title="${e.title} at ${e.time}">
-        ${e.type === 'class' ? '📖' : '📋'} ${e.title}
+        ${e.type === 'class' ? '' : ''} ${e.title}
       </div>`;
     });
     
@@ -605,13 +605,13 @@ function renderAssignments(filter = 'all') {
         <div>
           <strong>${escapeHtml(a.title)}</strong>
           <div style="font-size: 0.85rem; color: var(--text-secondary);">
-            ${cls ? `📚 ${escapeHtml(cls.name)} • ` : ''}
+            ${cls ? ` ${escapeHtml(cls.name)} • ` : ''}
             Due: ${a.dueDate}
           </div>
         </div>
         <div style="display: flex; gap: 8px;">
           <button class="btn ${a.completed ? 'btn-secondary' : 'btn-primary'}" onclick="toggleAssignment('${a.id}')">
-            ${a.completed ? '✓ Done' : 'Mark Done'}
+            ${a.completed ? ' Done' : 'Mark Done'}
           </button>
           <button class="btn btn-danger" onclick="deleteAssignment('${a.id}')">Delete</button>
         </div>
@@ -651,7 +651,7 @@ function renderExams() {
         <div>
           <strong>${escapeHtml(exam.title)}</strong>
           <div style="font-size: 0.85rem; color: var(--text-secondary);">
-            📅 ${exam.date} ${exam.time ? 'at ' + exam.time : ''}
+             ${exam.date} ${exam.time ? 'at ' + exam.time : ''}
           </div>
         </div>
         <button class="btn btn-danger" onclick="deleteExam('${exam.id}')">Delete</button>
@@ -686,7 +686,7 @@ function renderGrades() {
     <div class="assignment-item">
       <div>
         <strong>${escapeHtml(g.name)}</strong>
-        <div style="font-size: 0.85rem; color: var(--text-secondary);">📅 ${g.date}</div>
+        <div style="font-size: 0.85rem; color: var(--text-secondary);"> ${g.date}</div>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
         <span style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">${g.grade}%</span>
@@ -719,10 +719,10 @@ function renderTasks() {
           ${tasks.map(task => `
             <div class="kanban-card priority-${task.priority || 'medium'}">
               <div class="kanban-card-title">${escapeHtml(task.title)}</div>
-              ${task.dueDate ? `<div class="kanban-card-due">📅 ${task.dueDate}</div>` : ''}
+              ${task.dueDate ? `<div class="kanban-card-due"> ${task.dueDate}</div>` : ''}
               <div class="kanban-card-actions">
                 <button class="btn-icon-sm" onclick="moveTask('${task.id}', 'prev')">←</button>
-                <button class="btn-icon-sm" onclick="toggleTaskComplete('${task.id}')">${task.completed ? '✓' : '○'}</button>
+                <button class="btn-icon-sm" onclick="toggleTaskComplete('${task.id}')">${task.completed ? '' : '○'}</button>
                 <button class="btn-icon-sm" onclick="moveTask('${task.id}', 'next')">→</button>
                 <button class="btn-icon-sm" onclick="deleteTask('${task.id}')">×</button>
               </div>
@@ -768,9 +768,9 @@ function renderFlashcards() {
         <h3>${escapeHtml(deck.name)}</h3>
         <p style="color: var(--text-secondary); font-size: 0.9rem;">${stats.total} cards</p>
         <div class="deck-stats">
-          <span class="deck-stat">🆕 ${stats.new} new</span>
-          <span class="deck-stat">📚 ${stats.learning} learning</span>
-          <span class="deck-stat">✅ ${stats.mastered} mastered</span>
+          <span class="deck-stat"> ${stats.new} new</span>
+          <span class="deck-stat"> ${stats.learning} learning</span>
+          <span class="deck-stat"> ${stats.mastered} mastered</span>
         </div>
         <div class="deck-actions">
           <button class="btn btn-primary" onclick="studyDeck('${deck.id}')">Study</button>
@@ -985,7 +985,7 @@ function toggleTheme() {
   const newTheme = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', newTheme);
   appData.settings.theme = newTheme;
-  document.getElementById('themeToggle').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+  document.getElementById('themeToggle').textContent = newTheme === 'dark' ? '' : '';
   saveData();
 }
 
@@ -995,14 +995,14 @@ function applySettings() {
 
   if (theme === 'dark') {
     document.documentElement.setAttribute('data-theme', 'dark');
-    document.getElementById('themeToggle').textContent = '☀️';
+    document.getElementById('themeToggle').textContent = '';
   } else if (theme === 'light') {
     document.documentElement.setAttribute('data-theme', 'light');
-    document.getElementById('themeToggle').textContent = '🌙';
+    document.getElementById('themeToggle').textContent = '';
   } else {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-    document.getElementById('themeToggle').textContent = prefersDark ? '☀️' : '🌙';
+    document.getElementById('themeToggle').textContent = prefersDark ? '' : '';
   }
 
   document.documentElement.style.setProperty('--primary-color', accentColor);
@@ -1172,7 +1172,7 @@ function importData() {
 }
 
 function clearAllData() {
-  if (confirm('⚠️ Delete ALL data? This cannot be undone!')) {
+  if (confirm(' Delete ALL data? This cannot be undone!')) {
     if (confirm('Really sure?')) {
       appData = {
         classes: [], assignments: [], exams: [], grades: [], notes: [], tasks: [], flashcards: [], studySessions: [],

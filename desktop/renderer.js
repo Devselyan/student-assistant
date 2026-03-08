@@ -1,5 +1,5 @@
-// Student Assistant Pro - Renderer Process
-// Clean, modular architecture for the rebuilt app
+// Student Assistant Pro - Web Version Renderer
+// Uses localStorage instead of Electron IPC
 
 // ==================== STATE ====================
 let appData = {
@@ -32,17 +32,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupTimer();
   renderAll();
   applyTheme();
+  requestNotificationPermission();
+  startReminderChecker();
 });
 
 // ==================== DATA MANAGEMENT ====================
 async function loadData() {
   try {
-    if (window.electronAPI) {
-      appData = await window.electronAPI.getAllData();
-    } else {
-      // Fallback to localStorage for testing
-      const saved = localStorage.getItem('studentAssistantData');
-      if (saved) appData = JSON.parse(saved);
+    const saved = localStorage.getItem('studentAssistantData');
+    if (saved) {
+      appData = JSON.parse(saved);
     }
   } catch (err) {
     console.error('Error loading data:', err);
@@ -51,11 +50,7 @@ async function loadData() {
 
 async function saveData() {
   try {
-    if (window.electronAPI) {
-      await window.electronAPI.saveAllData(appData);
-    } else {
-      localStorage.setItem('studentAssistantData', JSON.stringify(appData));
-    }
+    localStorage.setItem('studentAssistantData', JSON.stringify(appData));
   } catch (err) {
     console.error('Error saving data:', err);
   }
@@ -79,6 +74,7 @@ function setupNavigation() {
   if (toggleBtn && sidebar) {
     toggleBtn.addEventListener('click', () => {
       sidebar.classList.toggle('collapsed');
+      sidebar.classList.toggle('open');
     });
   }
 }
@@ -99,6 +95,7 @@ function switchView(viewName) {
   if (viewName === 'assignments') renderAssignments();
   if (viewName === 'exams') renderExams();
   if (viewName === 'grades') renderGrades();
+  if (viewName === 'calendar') renderCalendar();
   if (viewName === 'notes') renderNotes();
   if (viewName === 'tasks') renderTasks();
   if (viewName === 'dashboard') renderDashboard();
@@ -109,8 +106,7 @@ function setupModals() {
   // Close modal when clicking overlay, close button, or cancel button
   document.addEventListener('click', (e) => {
     const target = e.target;
-    console.log('Click detected on:', target.tagName, target.className, target.getAttribute('data-modal'));
-
+    
     // Close on overlay click
     if (target.classList.contains('modal-overlay')) {
       closeModal(target.closest('.modal'));
@@ -122,7 +118,6 @@ function setupModals() {
     // Close on cancel button click (data-modal attribute)
     if (target.hasAttribute('data-modal')) {
       const modalId = target.getAttribute('data-modal');
-      console.log('Closing modal:', modalId);
       closeModal(modalId);
     }
   });
@@ -190,7 +185,7 @@ function setupEventListeners() {
 
   document.getElementById('importFileInput')?.addEventListener('change', handleFileImport);
 
-  // CSV Import confirmation
+  // Import confirmation
   document.getElementById('confirmImportBtn')?.addEventListener('click', () => {
     appData.classes.push(...pendingImportClasses);
     saveData();
@@ -482,7 +477,6 @@ function extractICSField(event, fieldName) {
 
 function parseICSDate(dateStr) {
   if (!dateStr) return null;
-  // Format: 20240115T090000 or 20240115
   const year = parseInt(dateStr.substring(0, 4));
   const month = parseInt(dateStr.substring(4, 6)) - 1;
   const day = parseInt(dateStr.substring(6, 8));
@@ -494,7 +488,6 @@ function parseICSDate(dateStr) {
 
 function formatICSTime(dateStr) {
   if (!dateStr) return '';
-  // Format: 20240115T090000
   if (dateStr.length >= 9 && dateStr.includes('T')) {
     const timePart = dateStr.split('T')[1];
     if (timePart && timePart.length >= 4) {
@@ -662,20 +655,18 @@ function renderAll() {
   renderAssignments();
   renderExams();
   renderGrades();
+  renderCalendar();
   renderNotes();
   renderTasks();
   updateClassSelects();
 }
 
 function renderDashboard() {
-  // Today's date
   const today = new Date();
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   document.getElementById('todayDate').textContent = today.toLocaleDateString('en-US', options);
 
-  // Today's schedule
   const currentDay = today.toLocaleDateString('en-US', { weekday: 'long' });
-  const currentTime = today.toTimeString().slice(0, 5);
   
   const todaysClasses = appData.classes.filter(cls => 
     cls.days.includes(currentDay)
@@ -696,7 +687,6 @@ function renderDashboard() {
     `).join('');
   }
 
-  // Upcoming assignments
   const upcomingAssignments = appData.assignments
     .filter(a => !a.completed && a.dueDate)
     .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
@@ -716,7 +706,6 @@ function renderDashboard() {
     `).join('');
   }
 
-  // Study streak
   const streakCount = document.getElementById('streakCount');
   if (streakCount) {
     streakCount.textContent = appData.settings.streak || 0;
@@ -725,7 +714,7 @@ function renderDashboard() {
 
 function renderClasses() {
   const grid = document.getElementById('classesGrid');
-
+  
   if (appData.classes.length === 0) {
     grid.innerHTML = '<p class="empty-state">No classes yet. Click "Add Class" to get started!</p>';
     return;
@@ -737,7 +726,7 @@ function renderClasses() {
       ${cls.teacher ? `<p style="color: var(--text-secondary); margin-bottom: 8px;">👨‍🏫 ${escapeHtml(cls.teacher)}</p>` : ''}
       <div class="class-details">
         <span class="class-detail-item">⏰ ${cls.startTime} - ${cls.endTime}</span>
-        <span class="class-detail-item location-link" style="cursor: pointer; color: var(--primary-color);" onclick="showClassesAtLocation('${escapeHtml(cls.location || 'Online').replace(/'/g, "\\'")}')">📍 ${escapeHtml(cls.location || 'Online')}</span>
+        <span class="class-detail-item">📍 ${escapeHtml(cls.location || 'Online')}</span>
         <span class="class-detail-item">🔔 ${cls.reminderMinutes}min before</span>
       </div>
       <div class="class-details" style="margin-top: 8px;">
@@ -797,7 +786,6 @@ function renderExams() {
     return;
   }
 
-  // Countdown cards for upcoming exams
   const today = new Date();
   const upcomingExams = appData.exams
     .filter(e => e.date && new Date(e.date) >= today)
@@ -815,7 +803,6 @@ function renderExams() {
     `;
   }).join('');
 
-  // Full list
   list.innerHTML = appData.exams.map(exam => {
     const cls = appData.classes.find(c => c.id === exam.classId);
     return `
@@ -844,7 +831,6 @@ function renderGrades() {
     return;
   }
 
-  // Calculate average
   const total = appData.grades.reduce((sum, g) => sum + g.grade, 0);
   const avg = (total / appData.grades.length).toFixed(1);
 
@@ -878,6 +864,127 @@ function renderGrades() {
     `;
   }).join('');
 }
+
+// ==================== CALENDAR ====================
+let currentCalendarDate = new Date();
+
+function renderCalendar() {
+  const container = document.getElementById('calendarContainer');
+  const monthYear = document.getElementById('currentMonthYear');
+  
+  const year = currentCalendarDate.getFullYear();
+  const month = currentCalendarDate.getMonth();
+  
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+    'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  monthYear.textContent = `${monthNames[month]} ${year}`;
+  
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startingDay = firstDay.getDay();
+  const totalDays = lastDay.getDate();
+  
+  const today = new Date();
+  const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+  
+  // Get all events for this month
+  const events = [];
+  appData.classes.forEach(cls => {
+    cls.days.forEach(dayName => {
+      const dayNum = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(dayName);
+      for (let d = 1; d <= totalDays; d++) {
+        const date = new Date(year, month, d);
+        if (date.getDay() === dayNum) {
+          events.push({
+            date: d,
+            title: cls.name,
+            time: cls.startTime,
+            color: cls.color || '#667eea',
+            type: 'class'
+          });
+        }
+      }
+    });
+  });
+  
+  appData.exams.forEach(exam => {
+    const examDate = new Date(exam.date);
+    if (examDate.getMonth() === month && examDate.getFullYear() === year) {
+      events.push({
+        date: examDate.getDate(),
+        title: exam.title,
+        time: exam.time || 'All day',
+        color: '#f56565',
+        type: 'exam'
+      });
+    }
+  });
+  
+  appData.assignments.forEach(a => {
+    if (!a.completed) {
+      const dueDate = new Date(a.dueDate);
+      if (dueDate.getMonth() === month && dueDate.getFullYear() === year) {
+        events.push({
+          date: dueDate.getDate(),
+          title: a.title,
+          time: 'Due',
+          color: '#ed8936',
+          type: 'assignment'
+        });
+      }
+    }
+  });
+  
+  let html = '<div class="calendar-grid">';
+  html += '<div class="calendar-weekday">Sun</div>';
+  html += '<div class="calendar-weekday">Mon</div>';
+  html += '<div class="calendar-weekday">Tue</div>';
+  html += '<div class="calendar-weekday">Wed</div>';
+  html += '<div class="calendar-weekday">Thu</div>';
+  html += '<div class="calendar-weekday">Fri</div>';
+  html += '<div class="calendar-weekday">Sat</div>';
+  
+  // Empty cells for days before the first day
+  for (let i = 0; i < startingDay; i++) {
+    html += '<div class="calendar-day empty"></div>';
+  }
+  
+  // Day cells
+  for (let d = 1; d <= totalDays; d++) {
+    const dayEvents = events.filter(e => e.date === d);
+    const isToday = isCurrentMonth && d === today.getDate();
+    
+    html += `<div class="calendar-day ${isToday ? 'today' : ''}">
+      <div class="calendar-day-number">${d}</div>
+      <div class="calendar-events">`;
+    
+    dayEvents.slice(0, 3).forEach(e => {
+      html += `<div class="calendar-event" style="background: ${e.color};" title="${e.title} at ${e.time}">
+        ${e.type === 'class' ? '📖' : e.type === 'exam' ? '📋' : '📝'} ${e.title}
+      </div>`;
+    });
+    
+    if (dayEvents.length > 3) {
+      html += `<div class="calendar-more">+${dayEvents.length - 3} more</div>`;
+    }
+    
+    html += '</div></div>';
+  }
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+document.getElementById('prevMonth')?.addEventListener('click', () => {
+  currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+  renderCalendar();
+});
+
+document.getElementById('nextMonth')?.addEventListener('click', () => {
+  currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+  renderCalendar();
+});
 
 function renderNotes() {
   const grid = document.getElementById('notesGrid');
@@ -1002,65 +1109,6 @@ function toggleTask(id) {
   }
 }
 
-// ==================== LOCATION FILTER ====================
-function showClassesAtLocation(location) {
-  const classesAtLocation = appData.classes.filter(cls => 
-    (cls.location || 'Online') === location
-  );
-  
-  if (classesAtLocation.length === 0) {
-    alert('No classes found at this location');
-    return;
-  }
-  
-  // Create a new window with the location classes
-  const win = window.open('', '_blank', 'width=600,height=700');
-  
-  const classesHtml = classesAtLocation.map(cls => `
-    <div style="background: #f7fafc; border-left: 4px solid ${cls.color || '#667eea'}; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
-      <h3 style="margin: 0 0 8px 0; color: #1a202c;">${escapeHtml(cls.name)}</h3>
-      ${cls.teacher ? `<p style="margin: 0 0 8px 0; color: #4a5568;">👨‍🏫 ${escapeHtml(cls.teacher)}</p>` : ''}
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.85rem;">
-        <span style="background: #edf2f7; padding: 4px 10px; border-radius: 20px;">⏰ ${cls.startTime} - ${cls.endTime}</span>
-        <span style="background: #edf2f7; padding: 4px 10px; border-radius: 20px;">${cls.days.join(', ')}</span>
-      </div>
-      ${cls.description ? `<p style="margin-top: 10px; font-size: 0.9rem; color: #718096;">${escapeHtml(cls.description)}</p>` : ''}
-    </div>
-  `).join('');
-  
-  win.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>📍 Classes at ${location}</title>
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          padding: 20px;
-          background: #f7fafc;
-          color: #1a202c;
-        }
-        h1 {
-          color: #667eea;
-          margin-bottom: 20px;
-        }
-        .count {
-          color: #4a5568;
-          margin-bottom: 20px;
-        }
-      </style>
-    </head>
-    <body>
-      <h1>📍 Classes at ${location}</h1>
-      <p class="count">${classesAtLocation.length} class(es) at this location</p>
-      ${classesHtml}
-    </body>
-    </html>
-  `);
-  
-  win.document.close();
-}
-
 // ==================== TIMER ====================
 function setupTimer() {
   const timerModes = document.querySelectorAll('.timer-mode');
@@ -1077,7 +1125,6 @@ function setupTimer() {
   document.getElementById('mainTimerPause')?.addEventListener('click', pauseTimer);
   document.getElementById('mainTimerReset')?.addEventListener('click', resetTimer);
 
-  // Quick timer
   document.getElementById('quickTimerStart')?.addEventListener('click', toggleQuickTimer);
   document.getElementById('quickTimerReset')?.addEventListener('click', resetQuickTimer);
 }
@@ -1122,7 +1169,6 @@ function startTimer() {
       clearInterval(timerInterval);
       timerRunning = false;
       document.getElementById('mainTimerStart').textContent = 'Start';
-      // Play sound or show notification
       alert('Timer complete!');
     }
   }, 1000);
@@ -1173,7 +1219,6 @@ function applyTheme() {
     document.documentElement.setAttribute('data-theme', 'light');
     document.getElementById('themeToggle').textContent = '🌙';
   } else {
-    // Auto - check system preference
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
     document.getElementById('themeToggle').textContent = prefersDark ? '☀️' : '🌙';
@@ -1185,43 +1230,85 @@ function applyTheme() {
   document.getElementById('enableNotifications').checked = appData.settings.notifications;
 }
 
-// ==================== EXPORT/IMPORT ====================
-async function exportData() {
-  if (window.electronAPI) {
-    const content = await window.electronAPI.exportData();
-    const result = await window.electronAPI.showSaveDialog(content, 'student-data.json');
-    if (result.success) {
-      alert('Data exported successfully!');
-    }
-  } else {
-    const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'student-data.json';
-    a.click();
-    URL.revokeObjectURL(url);
+// ==================== NOTIFICATIONS ====================
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
   }
 }
 
-async function importData() {
-  if (window.electronAPI) {
-    const result = await window.electronAPI.showOpenDialog();
-    if (result.success) {
+function sendClassReminder(cls) {
+  if (Notification.permission === 'granted') {
+    new Notification(`📚 Class Reminder: ${cls.name}`, {
+      body: `${cls.name} starts at ${cls.startTime} in ${cls.location || 'online'}`,
+      icon: 'icon-192.svg'
+    });
+  }
+}
+
+function startReminderChecker() {
+  setInterval(() => {
+    if (!appData.settings.notifications) return;
+    
+    const now = new Date();
+    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
+    const currentTime = now.toTimeString().slice(0, 5);
+
+    appData.classes.forEach(cls => {
+      if (cls.days.includes(currentDay) && cls.startTime <= currentTime) {
+        const reminderTime = new Date();
+        reminderTime.setHours(
+          parseInt(cls.startTime.split(':')[0]),
+          parseInt(cls.startTime.split(':')[1]) - (cls.reminderMinutes || 15),
+          0
+        );
+
+        if (now >= reminderTime && now < new Date(reminderTime.getTime() + 60000)) {
+          sendClassReminder(cls);
+        }
+      }
+    });
+  }, 30000);
+}
+
+// ==================== EXPORT/IMPORT ====================
+function exportData() {
+  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'student-data.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
       try {
-        const imported = JSON.parse(result.content);
+        const imported = JSON.parse(event.target.result);
         appData = imported;
-        await saveData();
+        saveData();
         renderAll();
+        applyTheme();
         alert('Data imported successfully!');
       } catch (err) {
         alert('Error importing data: ' + err.message);
       }
-    }
-  }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
-async function clearAllData() {
+function clearAllData() {
   if (confirm('⚠️ Are you sure you want to delete ALL data? This cannot be undone!')) {
     if (confirm('Really sure? This will delete all classes, assignments, exams, grades, notes, and tasks.')) {
       appData = {
@@ -1238,7 +1325,7 @@ async function clearAllData() {
           defaultReminderMinutes: 15
         }
       };
-      await saveData();
+      saveData();
       renderAll();
       applyTheme();
       alert('All data cleared.');
@@ -1254,4 +1341,3 @@ window.deleteExam = deleteExam;
 window.deleteGrade = deleteGrade;
 window.deleteTask = deleteTask;
 window.toggleTask = toggleTask;
-window.showClassesAtLocation = showClassesAtLocation;

@@ -3,8 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Student Assistant">
   <title>Student Assistant Pro</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.svg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -38,6 +43,10 @@
       <li class="nav-item" data-view="timer">
         <span class="nav-icon">⏱️</span>
         <span class="nav-text">Study Timer</span>
+      </li>
+      <li class="nav-item" data-view="calendar">
+        <span class="nav-icon">📅</span>
+        <span class="nav-text">Calendar</span>
       </li>
       <li class="nav-item" data-view="notes">
         <span class="nav-icon">📓</span>
@@ -180,6 +189,21 @@
       <div class="grades-summary" id="gradesSummary"></div>
       <div class="grades-list" id="gradesList">
         <p class="empty-state">No grades recorded</p>
+      </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div class="view" id="view-calendar">
+      <header class="view-header">
+        <h2>📅 Calendar</h2>
+        <div class="calendar-nav">
+          <button class="btn-icon" id="prevMonth">‹</button>
+          <span id="currentMonthYear"></span>
+          <button class="btn-icon" id="nextMonth">›</button>
+        </div>
+      </header>
+      <div class="calendar-container" id="calendarContainer">
+        <!-- Calendar grid rendered here -->
       </div>
     </div>
 
@@ -589,7 +613,7 @@
     </div>
   </div>
 
-  <!-- CSV Preview Modal -->
+  <!-- CSV/ICS Preview Modal -->
   <div class="modal" id="csvPreviewModal">
     <div class="modal-overlay"></div>
     <div class="modal-content modal-lg">
@@ -597,7 +621,7 @@
         <h3>📁 Preview Imported Classes</h3>
         <button class="modal-close" data-modal="csvPreviewModal">×</button>
       </div>
-      <p class="preview-info">Found <span id="classCount">0</span> classes in your CSV file</p>
+      <p class="preview-info">Found <span id="classCount">0</span> classes in your file</p>
       <div id="csvPreview" class="csv-preview"></div>
       <div class="modal-actions">
         <button class="btn btn-primary" id="confirmImportBtn">✅ Import All</button>
@@ -609,3 +633,4 @@
   <script src="renderer.js"></script>
 </body>
 </html>
+<!-- rebuild -->

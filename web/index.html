@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Student Assistant">
+  <title>📚 Student Assistant Pro</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Navigation Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h1>📚 Student Pro</h1>
+      <button id="toggleSidebar" class="btn-icon">☰</button>
+    </div>
+    <ul class="nav-menu">
+      <li class="nav-item active" data-view="dashboard">
+        <span class="nav-icon">📊</span>
+        <span class="nav-text">Dashboard</span>
+      </li>
+      <li class="nav-item" data-view="classes">
+        <span class="nav-icon">📖</span>
+        <span class="nav-text">My Classes</span>
+      </li>
+      <li class="nav-item" data-view="assignments">
+        <span class="nav-icon">📝</span>
+        <span class="nav-text">Assignments</span>
+      </li>
+      <li class="nav-item" data-view="exams">
+        <span class="nav-icon">📋</span>
+        <span class="nav-text">Exams</span>
+      </li>
+      <li class="nav-item" data-view="grades">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-text">Grades</span>
+      </li>
+      <li class="nav-item" data-view="timer">
+        <span class="nav-icon">⏱️</span>
+        <span class="nav-text">Study Timer</span>
+      </li>
+      <li class="nav-item" data-view="notes">
+        <span class="nav-icon">📓</span>
+        <span class="nav-text">Notes</span>
+      </li>
+      <li class="nav-item" data-view="flashcards">
+        <span class="nav-icon">🃏</span>
+        <span class="nav-text">Flashcards</span>
+      </li>
+      <li class="nav-item" data-view="attendance">
+        <span class="nav-icon">✅</span>
+        <span class="nav-text">Attendance</span>
+      </li>
+      <li class="nav-item" data-view="tasks">
+        <span class="nav-icon">✓</span>
+        <span class="nav-text">Tasks</span>
+      </li>
+      <li class="nav-item" data-view="teachers">
+        <span class="nav-icon">👨‍🏫</span>
+        <span class="nav-text">Teachers</span>
+      </li>
+      <li class="nav-item" data-view="calendar">
+        <span class="nav-icon">📅</span>
+        <span class="nav-text">Calendar</span>
+      </li>
+      <li class="nav-item" data-view="resources">
+        <span class="nav-icon">📁</span>
+        <span class="nav-text">Resources</span>
+      </li>
+      <li class="nav-item" data-view="settings">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-text">Settings</span>
+      </li>
+    </ul>
+    <div class="sidebar-footer">
+      <div class="study-streak">
+        <span class="streak-icon">🔥</span>
+        <span class="streak-count" id="streakCount">0</span>
+        <span class="streak-label">day streak</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="main-content" id="mainContent">
+    <!-- Dashboard View -->
+    <div class="view active" id="view-dashboard">
+      <header class="view-header">
+        <h2>📊 Dashboard</h2>
+        <div class="header-actions">
+          <button id="themeToggle" class="btn-icon" title="Toggle Theme">🌙</button>
+          <button id="notificationBtn" class="btn-icon" title="Notifications">🔔</button>
+        </div>
+      </header>
+
+      <div class="dashboard-grid">
+        <!-- Today's Schedule -->
+        <div class="card card-lg">
+          <div class="card-header">
+            <h3>📅 Today's Schedule</h3>
+            <span class="card-date" id="todayDate"></span>
+          </div>
+          <div class="card-body" id="todaySchedule">
+            <!-- Today's classes rendered here -->
+          </div>
+        </div>
+
+        <!-- Upcoming Assignments -->
+        <div class="card card-md">
+          <div class="card-header">
+            <h3>📝 Upcoming Assignments</h3>
+            <a href="#" class="view-all" data-view="assignments">View All</a>
+          </div>
+          <div class="card-body" id="upcomingAssignments">
+            <!-- Assignments rendered here -->
+          </div>
+        </div>
+
+        <!-- Study Timer Quick Access -->
+        <div class="card card-sm">
+          <div class="card-header">
+            <h3>⏱️ Quick Timer</h3>
+          </div>
+          <div class="card-body">
+            <div class="quick-timer">
+              <div class="timer-display" id="quickTimerDisplay">25:00</div>
+              <div class="timer-controls">
+                <button class="btn btn-primary" id="quickTimerStart">Start</button>
+                <button class="btn btn-secondary" id="quickTimerReset">Reset</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grade Overview -->
+        <div class="card card-md">
+          <div class="card-header">
+            <h3>🎯 Grade Overview</h3>
+            <a href="#" class="view-all" data-view="grades">View All</a>
+          </div>
+          <div class="card-body" id="gradeOverview">
+            <!-- Grades rendered here -->
+          </div>
+        </div>
+
+        <!-- Study Stats -->
+        <div class="card card-md">
+          <div class="card-header">
+            <h3>📈 Study Statistics</h3>
+          </div>
+          <div class="card-body" id="studyStats">
+            <div class="stat-item">
+              <span class="stat-value" id="totalStudyHours">0</span>
+              <span class="stat-label">Hours Studied</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="completedAssignments">0</span>
+              <span class="stat-label">Assignments Done</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="avgGrade">-</span>
+              <span class="stat-label">Average Grade</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card card-sm">
+          <div class="card-header">
+            <h3>⚡ Quick Actions</h3>
+          </div>
+          <div class="card-body">
+            <div class="quick-actions">
+              <button class="btn btn-primary btn-block" id="quickAddClass">+ Add Class</button>
+              <button class="btn btn-secondary btn-block" id="quickAddAssignment">+ Assignment</button>
+              <button class="btn btn-secondary btn-block" id="quickAddExam">+ Exam</button>
+              <button class="btn btn-secondary btn-block" id="quickAddNote">+ Note</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classes View -->
+    <div class="view" id="view-classes">
+      <header class="view-header">
+        <h2>📖 My Classes</h2>
+        <button class="btn btn-primary" id="addClassBtn">+ Add Class</button>
+      </header>
+      <div class="classes-grid" id="classesGrid">
+        <!-- Class cards rendered here -->
+      </div>
+    </div>
+
+    <!-- Assignments View -->
+    <div class="view" id="view-assignments">
+      <header class="view-header">
+        <h2>📝 Assignments</h2>
+        <button class="btn btn-primary" id="addAssignmentBtn">+ Add Assignment</button>
+      </header>
+      <div class="assignments-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="pending">Pending</button>
+        <button class="filter-btn" data-filter="completed">Completed</button>
+        <button class="filter-btn" data-filter="overdue">Overdue</button>
+      </div>
+      <div class="assignments-list" id="assignmentsList">
+        <!-- Assignments rendered here -->
+      </div>
+    </div>
+
+    <!-- Exams View -->
+    <div class="view" id="view-exams">
+      <header class="view-header">
+        <h2>📋 Exams</h2>
+        <button class="btn btn-primary" id="addExamBtn">+ Add Exam</button>
+      </header>
+      <div class="exams-countdown" id="examsCountdown">
+        <!-- Exam countdown cards -->
+      </div>
+      <div class="exams-list" id="examsList">
+        <!-- Exams list -->
+      </div>
+    </div>
+
+    <!-- Grades View -->
+    <div class="view" id="view-grades">
+      <header class="view-header">
+        <h2>🎯 Grades</h2>
+        <button class="btn btn-primary" id="addGradeBtn">+ Add Grade</button>
+      </header>
+      <div class="grades-summary" id="gradesSummary">
+        <!-- Grade summary cards -->
+      </div>
+      <div class="grades-list" id="gradesList">
+        <!-- Grades list -->
+      </div>
+    </div>
+
+    <!-- Study Timer View -->
+    <div class="view" id="view-timer">
+      <header class="view-header">
+        <h2>⏱️ Study Timer</h2>
+      </header>
+      <div class="timer-container">
+        <div class="timer-modes">
+          <button class="timer-mode active" data-mode="pomodoro">Pomodoro</button>
+          <button class="timer-mode" data-mode="short">Short Break</button>
+          <button class="timer-mode" data-mode="long">Long Break</button>
+          <button class="timer-mode" data-mode="custom">Custom</button>
+        </div>
+        <div class="timer-display-large" id="mainTimerDisplay">25:00</div>
+        <div class="timer-controls-large">
+          <button class="btn btn-primary btn-lg" id="mainTimerStart">Start</button>
+          <button class="btn btn-secondary btn-lg" id="mainTimerPause">Pause</button>
+          <button class="btn btn-secondary btn-lg" id="mainTimerReset">Reset</button>
+        </div>
+        <div class="timer-sessions" id="timerSessions">
+          <!-- Completed sessions -->
+        </div>
+        <div class="timer-settings">
+          <label>Pomodoro Length: <input type="number" id="pomodoroLength" value="25" min="1" max="120"> min</label>
+          <label>Short Break: <input type="number" id="shortBreakLength" value="5" min="1" max="30"> min</label>
+          <label>Long Break: <input type="number" id="longBreakLength" value="15" min="1" max="60"> min</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes View -->
+    <div class="view" id="view-notes">
+      <header class="view-header">
+        <h2>📓 Notes</h2>
+        <button class="btn btn-primary" id="addNoteBtn">+ Add Note</button>
+      </header>
+      <div class="notes-search">
+        <input type="text" id="notesSearch" placeholder="Search notes...">
+        <select id="notesClassFilter">
+          <option value="">All Classes</option>
+        </select>
+      </div>
+      <div class="notes-grid" id="notesGrid">
+        <!-- Note cards -->
+      </div>
+    </div>
+
+    <!-- Flashcards View -->
+    <div class="view" id="view-flashcards">
+      <header class="view-header">
+        <h2>🃏 Flashcards</h2>
+        <button class="btn btn-primary" id="addDeckBtn">+ Create Deck</button>
+      </header>
+      <div class="decks-grid" id="decksGrid">
+        <!-- Flashcard decks -->
+      </div>
+    </div>
+
+    <!-- Attendance View -->
+    <div class="view" id="view-attendance">
+      <header class="view-header">
+        <h2>✅ Attendance</h2>
+      </header>
+      <div class="attendance-summary" id="attendanceSummary">
+        <!-- Attendance stats -->
+      </div>
+      <div class="attendance-list" id="attendanceList">
+        <!-- Per-class attendance -->
+      </div>
+    </div>
+
+    <!-- Tasks View -->
+    <div class="view" id="view-tasks">
+      <header class="view-header">
+        <h2>✓ Tasks</h2>
+        <button class="btn btn-primary" id="addTaskBtn">+ Add Task</button>
+      </header>
+      <div class="tasks-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="today">Today</button>
+        <button class="filter-btn" data-filter="week">This Week</button>
+        <button class="filter-btn" data-filter="completed">Completed</button>
+      </div>
+      <div class="tasks-list" id="tasksList">
+        <!-- Tasks -->
+      </div>
+    </div>
+
+    <!-- Teachers View -->
+    <div class="view" id="view-teachers">
+      <header class="view-header">
+        <h2>👨‍🏫 Teachers</h2>
+        <button class="btn btn-primary" id="addTeacherBtn">+ Add Teacher</button>
+      </header>
+      <div class="teachers-grid" id="teachersGrid">
+        <!-- Teacher cards -->
+      </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div class="view" id="view-calendar">
+      <header class="view-header">
+        <h2>📅 Calendar</h2>
+        <div class="calendar-nav">
+          <button class="btn-icon" id="prevMonth">‹</button>
+          <span id="currentMonthYear"></span>
+          <button class="btn-icon" id="nextMonth">›</button>
+        </div>
+      </header>
+      <div class="calendar-container" id="calendarContainer">
+        <!-- Calendar grid -->
+      </div>
+    </div>
+
+    <!-- Resources View -->
+    <div class="view" id="view-resources">
+      <header class="view-header">
+        <h2>📁 Resources</h2>
+        <button class="btn btn-primary" id="addResourceBtn">+ Add Resource</button>
+      </header>
+      <div class="resources-list" id="resourcesList">
+        <!-- Resource links -->
+      </div>
+    </div>
+
+    <!-- Settings View -->
+    <div class="view" id="view-settings">
+      <header class="view-header">
+        <h2>⚙️ Settings</h2>
+      </header>
+      <div class="settings-sections">
+        <section class="settings-section">
+          <h3>🎨 Appearance</h3>
+          <div class="setting-item">
+            <label>Theme</label>
+            <select id="themeSelect">
+              <option value="auto">Auto</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label>Accent Color</label>
+            <input type="color" id="accentColor" value="#667eea">
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3>🔔 Notifications</h3>
+          <div class="setting-item">
+            <label>Enable Notifications</label>
+            <input type="checkbox" id="enableNotifications" checked>
+          </div>
+          <div class="setting-item">
+            <label>Default Reminder Time</label>
+            <select id="defaultReminderTime">
+              <option value="5">5 minutes before</option>
+              <option value="10">10 minutes before</option>
+              <option value="15" selected>15 minutes before</option>
+              <option value="30">30 minutes before</option>
+              <option value="60">1 hour before</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3>💾 Data Management</h3>
+          <div class="setting-item">
+            <button class="btn btn-secondary" id="exportDataBtn">📥 Export All Data</button>
+            <button class="btn btn-secondary" id="importDataBtn">📤 Import Data</button>
+            <input type="file" id="importDataFile" accept=".json" style="display:none">
+          </div>
+          <div class="setting-item">
+            <button class="btn btn-danger" id="clearAllDataBtn">⚠️ Clear All Data</button>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3>📊 About</h3>
+          <p class="about-text">Student Assistant Pro v2.0</p>
+          <p class="about-text">Built for students, by students.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modals -->
+  <!-- Add Class Modal -->
+  <div class="modal" id="classModal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="classModalTitle">Add New Class</h3>
+        <button class="modal-close" data-modal="classModal">×</button>
+      </div>
+      <form id="classForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Class Name *</label>
+            <input type="text" name="name" required placeholder="e.g., Mathematics 101">
+          </div>
+          <div class="form-group">
+            <label>Teacher</label>
+            <select name="teacherId" id="classTeacherSelect">
+              <option value="">Select Teacher</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Time *</label>
+            <input type="time" name="startTime" required>
+          </div>
+          <div class="form-group">
+            <label>End Time *</label>
+            <input type="time" name="endTime" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" name="location" placeholder="e.g., Room 201 or Zoom link">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" rows="2" placeholder="Course description, notes..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Days *</label>
+          <div class="days-selector">
+            <label class="day-checkbox"><input type="checkbox" name="days" value="Monday"> Mon</label>
+            <label class="day-checkbox"><input type="checkbox" name="days" value="Tuesday"> Tue</label>
+            <label class="day-checkbox"><input type="checkbox" name="days" value="Wednesday"> Wed</label>
+            <label class="day-checkbox"><input type="checkbox" name="days" value="Thursday"> Thu</label>
+            <label class="day-checkbox"><input type="checkbox" name="days" value="Friday"> Fri</label>
+            <label class="day-checkbox"><input type="checkbox" name="days" value="Saturday"> Sat</label>
+            <label class="day-checkbox"><input type="checkbox" name="days" value="Sunday"> Sun</label>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Color</label>
+            <input type="color" name="color" value="#667eea">
+          </div>
+          <div class="form-group">
+            <label>Reminder (minutes before)</label>
+            <input type="number" name="reminderMinutes" value="15" min="0" max="1440">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Class</button>
+          <button type="button" class="btn btn-secondary" data-modal="classModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Assignment Modal -->
+  <div class="modal" id="assignmentModal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="assignmentModalTitle">Add Assignment</h3>
+        <button class="modal-close" data-modal="assignmentModal">×</button>
+      </div>
+      <form id="assignmentForm">
+        <div class="form-group">
+          <label>Assignment Title *</label>
+          <input type="text" name="title" required placeholder="e.g., Chapter 5 Problems">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Class *</label>
+            <select name="classId" id="assignmentClassSelect" required>
+              <option value="">Select Class</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <select name="priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Due Date *</label>
+            <input type="date" name="dueDate" required>
+          </div>
+          <div class="form-group">
+            <label>Due Time</label>
+            <input type="time" name="dueTime" value="23:59">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" rows="3" placeholder="Assignment details, requirements..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Estimated Hours</label>
+          <input type="number" name="estimatedHours" min="0.5" step="0.5" placeholder="e.g., 2.5">
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Assignment</button>
+          <button type="button" class="btn btn-secondary" data-modal="assignmentModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Exam Modal -->
+  <div class="modal" id="examModal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="examModalTitle">Add Exam</h3>
+        <button class="modal-close" data-modal="examModal">×</button>
+      </div>
+      <form id="examForm">
+        <div class="form-group">
+          <label>Exam Title *</label>
+          <input type="text" name="title" required placeholder="e.g., Midterm Exam">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Class *</label>
+            <select name="classId" id="examClassSelect" required>
+              <option value="">Select Class</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Exam Type</label>
+            <select name="type">
+              <option value="midterm">Midterm</option>
+              <option value="final">Final</option>
+              <option value="quiz">Quiz</option>
+              <option value="test">Test</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date *</label>
+            <input type="date" name="date" required>
+          </div>
+          <div class="form-group">
+            <label>Time</label>
+            <input type="time" name="time">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" name="location" placeholder="e.g., Room 101 or Online">
+        </div>
+        <div class="form-group">
+          <label>Topics to Cover</label>
+          <textarea name="topics" rows="3" placeholder="List topics that will be on the exam..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Exam</button>
+          <button type="button" class="btn btn-secondary" data-modal="examModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Note Modal -->
+  <div class="modal" id="noteModal">
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h3 id="noteModalTitle">Add Note</h3>
+        <button class="modal-close" data-modal="noteModal">×</button>
+      </div>
+      <form id="noteForm">
+        <div class="form-group">
+          <label>Note Title *</label>
+          <input type="text" name="title" required placeholder="Note title...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Class</label>
+            <select name="classId" id="noteClassSelect">
+              <option value="">No Class</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tags</label>
+            <input type="text" name="tags" placeholder="tag1, tag2, tag3">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Content *</label>
+          <textarea name="content" rows="15" required placeholder="Write your notes here..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Note</button>
+          <button type="button" class="btn btn-secondary" data-modal="noteModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Grade Modal -->
+  <div class="modal" id="gradeModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="gradeModalTitle">Add Grade</h3>
+        <button class="modal-close" data-modal="gradeModal">×</button>
+      </div>
+      <form id="gradeForm">
+        <div class="form-group">
+          <label>Class *</label>
+          <select name="classId" id="gradeClassSelect" required>
+            <option value="">Select Class</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Assignment/Exam Name *</label>
+          <input type="text" name="name" required placeholder="e.g., Midterm Exam">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Grade *</label>
+            <input type="number" name="grade" required min="0" max="100" step="0.1" placeholder="0-100">
+          </div>
+          <div class="form-group">
+            <label>Weight (%)</label>
+            <input type="number" name="weight" min="0" max="100" step="0.1" placeholder="e.g., 20">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" name="date">
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Grade</button>
+          <button type="button" class="btn btn-secondary" data-modal="gradeModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Task Modal -->
+  <div class="modal" id="taskModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="taskModalTitle">Add Task</h3>
+        <button class="modal-close" data-modal="taskModal">×</button>
+      </div>
+      <form id="taskForm">
+        <div class="form-group">
+          <label>Task *</label>
+          <input type="text" name="title" required placeholder="What needs to be done?">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Due Date</label>
+            <input type="date" name="dueDate">
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <select name="priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea name="notes" rows="2"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Task</button>
+          <button type="button" class="btn btn-secondary" data-modal="taskModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Teacher Modal -->
+  <div class="modal" id="teacherModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="teacherModalTitle">Add Teacher</h3>
+        <button class="modal-close" data-modal="teacherModal">×</button>
+      </div>
+      <form id="teacherForm">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" name="name" required placeholder="e.g., Dr. John Smith">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="teacher@school.edu">
+        </div>
+        <div class="form-group">
+          <label>Office Location</label>
+          <input type="text" name="office" placeholder="e.g., Building A, Room 205">
+        </div>
+        <div class="form-group">
+          <label>Office Hours</label>
+          <input type="text" name="officeHours" placeholder="e.g., Mon/Wed 2-4 PM">
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" name="phone" placeholder="(555) 123-4567">
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Teacher</button>
+          <button type="button" class="btn btn-secondary" data-modal="teacherModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Flashcard Study Modal -->
+  <div class="modal" id="flashcardStudyModal">
+    <div class="modal-content modal-study">
+      <div class="modal-header">
+        <h3 id="flashcardDeckTitle">Studying</h3>
+        <button class="modal-close" data-modal="flashcardStudyModal">×</button>
+      </div>
+      <div class="flashcard-study-area">
+        <div class="flashcard" id="studyFlashcard">
+          <div class="flashcard-front">
+            <p class="flashcard-text" id="flashcardQuestion">Question</p>
+          </div>
+          <div class="flashcard-back">
+            <p class="flashcard-text" id="flashcardAnswer">Answer</p>
+          </div>
+        </div>
+        <div class="flashcard-controls">
+          <button class="btn btn-secondary" id="flipCard">Flip</button>
+          <button class="btn btn-danger" id="markWrong">❌ Don't Know</button>
+          <button class="btn btn-success" id="markRight">✅ Know It</button>
+        </div>
+        <div class="flashcard-progress">
+          <span id="flashcardProgress">1/10</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Flashcard Deck Modal -->
+  <div class="modal" id="flashcardDeckModal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="flashcardDeckModalTitle">Create Deck</h3>
+        <button class="modal-close" data-modal="flashcardDeckModal">×</button>
+      </div>
+      <form id="flashcardDeckForm">
+        <div class="form-group">
+          <label>Deck Name *</label>
+          <input type="text" name="name" required placeholder="e.g., Biology Chapter 1">
+        </div>
+        <div class="form-group">
+          <label>Class</label>
+          <select name="classId" id="deckClassSelect">
+            <option value="">No Class</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Flashcards</label>
+          <div id="flashcardList">
+            <!-- Flashcard inputs -->
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="addFlashcardBtn">+ Add Card</button>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Deck</button>
+          <button type="button" class="btn btn-secondary" data-modal="flashcardDeckModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Resource Modal -->
+  <div class="modal" id="resourceModal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="resourceModalTitle">Add Resource</h3>
+        <button class="modal-close" data-modal="resourceModal">×</button>
+      </div>
+      <form id="resourceForm">
+        <div class="form-group">
+          <label>Resource Title *</label>
+          <input type="text" name="title" required placeholder="e.g., Chapter 3 Notes PDF">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Class</label>
+            <select name="classId" id="resourceClassSelect">
+              <option value="">No Class</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Resource Type</label>
+            <select name="type">
+              <option value="link">🔗 Link</option>
+              <option value="document">📄 Document</option>
+              <option value="video">🎥 Video</option>
+              <option value="audio">🎵 Audio</option>
+              <option value="image">🖼️ Image</option>
+              <option value="other">📦 Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>URL / Link</label>
+          <input type="url" name="url" placeholder="https://example.com/resource">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" rows="3" placeholder="Describe this resource..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Tags (comma separated)</label>
+          <input type="text" name="tags" placeholder="lecture, chapter1, important">
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Resource</button>
+          <button type="button" class="btn btn-secondary" data-modal="resourceModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Grade Analytics Modal -->
+  <div class="modal" id="gradeAnalyticsModal">
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h3>📊 Grade Analytics</h3>
+        <button class="modal-close" data-modal="gradeAnalyticsModal">×</button>
+      </div>
+      <div class="analytics-content" style="padding: 20px;">
+        <div class="analytics-section">
+          <h4>Overall Performance</h4>
+          <div class="analytics-grid" id="overallPerformance">
+            <!-- Analytics rendered here -->
+          </div>
+        </div>
+        <div class="analytics-section">
+          <h4>Grade Trends</h4>
+          <div class="grade-trend-chart" id="gradeTrendChart">
+            <!-- Chart rendered here -->
+          </div>
+        </div>
+        <div class="analytics-section">
+          <h4>Class Performance</h4>
+          <div class="class-comparison" id="classComparison">
+            <!-- Comparison rendered here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Study Analytics Modal -->
+  <div class="modal" id="studyAnalyticsModal">
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h3>📈 Study Analytics</h3>
+        <button class="modal-close" data-modal="studyAnalyticsModal">×</button>
+      </div>
+      <div class="analytics-content" style="padding: 20px;">
+        <div class="analytics-section">
+          <h4>Study Overview</h4>
+          <div class="analytics-grid" id="studyOverview">
+            <div class="analytics-card">
+              <div class="analytics-value" id="totalStudyTime">0h</div>
+              <div class="analytics-label">Total Study Time</div>
+            </div>
+            <div class="analytics-card">
+              <div class="analytics-value" id="totalSessions">0</div>
+              <div class="analytics-label">Study Sessions</div>
+            </div>
+            <div class="analytics-card">
+              <div class="analytics-value" id="avgSessionLength">0m</div>
+              <div class="analytics-label">Avg Session</div>
+            </div>
+            <div class="analytics-card">
+              <div class="analytics-value" id="currentStreak">0</div>
+              <div class="analytics-label">Day Streak 🔥</div>
+            </div>
+          </div>
+        </div>
+        <div class="analytics-section">
+          <h4>Weekly Activity</h4>
+          <div class="weekly-activity-chart" id="weeklyActivityChart">
+            <!-- Chart rendered here -->
+          </div>
+        </div>
+        <div class="analytics-section">
+          <h4>Recent Sessions</h4>
+          <div class="sessions-list" id="sessionsList">
+            <!-- Sessions rendered here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Note Modal -->
+  <div class="modal" id="viewNoteModal">
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h3 id="viewNoteTitle">Note</h3>
+        <div class="modal-actions-small">
+          <button class="btn-icon" id="editNoteBtn">✏️</button>
+          <button class="modal-close" data-modal="viewNoteModal">×</button>
+        </div>
+      </div>
+      <div class="note-view-content" id="noteViewContent">
+        <!-- Note content -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Search Modal -->
+  <div class="modal" id="globalSearchModal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>🔍 Search</h3>
+        <button class="modal-close" data-modal="globalSearchModal">×</button>
+      </div>
+      <div class="search-container" style="padding: 20px;">
+        <div class="search-input-wrapper">
+          <input type="text" id="globalSearchInput" placeholder="Search classes, assignments, exams, notes, tasks..." autofocus>
+        </div>
+        <div class="search-results" id="searchResults">
+          <div class="search-hint">
+            <p>Start typing to search across all your data</p>
+            <p class="search-shortcuts">
+              <kbd>c</kbd> Classes | 
+              <kbd>a</kbd> Assignments | 
+              <kbd>e</kbd> Exams | 
+              <kbd>n</kbd> Notes | 
+              <kbd>t</kbd> Tasks
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Help Modal -->
+  <div class="modal" id="quickHelpModal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>⌨️ Keyboard Shortcuts</h3>
+        <button class="modal-close" data-modal="quickHelpModal">×</button>
+      </div>
+      <div class="help-content" style="padding: 20px;">
+        <div class="shortcut-grid">
+          <div class="shortcut-item">
+            <kbd>Ctrl</kbd> + <kbd>K</kbd>
+            <span>Open Search</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>Ctrl</kbd> + <kbd>H</kbd>
+            <span>Open Help</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>Ctrl</kbd> + <kbd>D</kbd>
+            <span>Go to Dashboard</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>Escape</kbd>
+            <span>Close Modal</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>1</kbd> - <kbd>9</kbd>
+            <span>Switch Views</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>Enter</kbd>
+            <span>Confirm Action</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+  <script>
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch(err => console.error('SW registration failed:', err));
+    }
+  </script>
+</body>
+</html>

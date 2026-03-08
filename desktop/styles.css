@@ -512,6 +512,11 @@ form {
   border-radius: 20px;
 }
 
+.class-detail-item.location-link:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
 .class-actions {
   margin-top: 15px;
   display: flex;

@@ -626,7 +626,7 @@ function renderDashboard() {
 
 function renderClasses() {
   const grid = document.getElementById('classesGrid');
-  
+
   if (appData.classes.length === 0) {
     grid.innerHTML = '<p class="empty-state">No classes yet. Click "Add Class" to get started!</p>';
     return;
@@ -638,7 +638,7 @@ function renderClasses() {
       ${cls.teacher ? `<p style="color: var(--text-secondary); margin-bottom: 8px;">👨‍🏫 ${escapeHtml(cls.teacher)}</p>` : ''}
       <div class="class-details">
         <span class="class-detail-item">⏰ ${cls.startTime} - ${cls.endTime}</span>
-        <span class="class-detail-item">📍 ${escapeHtml(cls.location || 'Online')}</span>
+        <span class="class-detail-item location-link" style="cursor: pointer; color: var(--primary-color);" onclick="showClassesAtLocation('${escapeHtml(cls.location || 'Online').replace(/'/g, "\\'")}')">📍 ${escapeHtml(cls.location || 'Online')}</span>
         <span class="class-detail-item">🔔 ${cls.reminderMinutes}min before</span>
       </div>
       <div class="class-details" style="margin-top: 8px;">
@@ -903,6 +903,38 @@ function toggleTask(id) {
   }
 }
 
+// ==================== LOCATION FILTER ====================
+function showClassesAtLocation(location) {
+  const classesAtLocation = appData.classes.filter(cls => 
+    (cls.location || 'Online') === location
+  );
+  
+  if (classesAtLocation.length === 0) {
+    alert('No classes found at this location');
+    return;
+  }
+  
+  // Show in a modal
+  const modal = document.getElementById('locationClassesModal');
+  const title = document.getElementById('locationClassesTitle');
+  const content = document.getElementById('locationClassesContent');
+  
+  title.textContent = `📍 Classes at ${location}`;
+  content.innerHTML = classesAtLocation.map(cls => `
+    <div class="class-card" style="margin-bottom: 15px; border-left-color: ${cls.color || 'var(--primary-color)'}">
+      <h3>${escapeHtml(cls.name)}</h3>
+      ${cls.teacher ? `<p style="color: var(--text-secondary); margin-bottom: 8px;">👨‍🏫 ${escapeHtml(cls.teacher)}</p>` : ''}
+      <div class="class-details">
+        <span class="class-detail-item">⏰ ${cls.startTime} - ${cls.endTime}</span>
+        <span class="class-detail-item">${cls.days.join(', ')}</span>
+      </div>
+      ${cls.description ? `<p style="margin-top: 10px; font-size: 0.9rem; color: var(--text-secondary);">${escapeHtml(cls.description)}</p>` : ''}
+    </div>
+  `).join('');
+  
+  openModal('locationClassesModal');
+}
+
 // ==================== TIMER ====================
 function setupTimer() {
   const timerModes = document.querySelectorAll('.timer-mode');
@@ -1096,3 +1128,4 @@ window.deleteExam = deleteExam;
 window.deleteGrade = deleteGrade;
 window.deleteTask = deleteTask;
 window.toggleTask = toggleTask;
+window.showClassesAtLocation = showClassesAtLocation;

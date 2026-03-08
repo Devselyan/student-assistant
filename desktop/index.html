@@ -16,51 +16,51 @@
     </div>
     <ul class="nav-menu">
       <li class="nav-item active" data-view="dashboard">
-        <span class="nav-icon">📊</span>
+        <span class="nav-icon" data-icon="dashboard"></span>
         <span class="nav-text">Dashboard</span>
       </li>
       <li class="nav-item" data-view="classes">
-        <span class="nav-icon">📖</span>
+        <span class="nav-icon" data-icon="classes"></span>
         <span class="nav-text">My Classes</span>
       </li>
       <li class="nav-item" data-view="calendar">
-        <span class="nav-icon">📅</span>
+        <span class="nav-icon" data-icon="calendar"></span>
         <span class="nav-text">Calendar</span>
       </li>
       <li class="nav-item" data-view="assignments">
-        <span class="nav-icon">📝</span>
+        <span class="nav-icon" data-icon="assignments"></span>
         <span class="nav-text">Assignments</span>
       </li>
       <li class="nav-item" data-view="exams">
-        <span class="nav-icon">📋</span>
+        <span class="nav-icon" data-icon="exams"></span>
         <span class="nav-text">Exams</span>
       </li>
       <li class="nav-item" data-view="grades">
-        <span class="nav-icon">🎯</span>
+        <span class="nav-icon" data-icon="grades"></span>
         <span class="nav-text">Grades</span>
       </li>
       <li class="nav-item" data-view="tasks">
-        <span class="nav-icon">✓</span>
+        <span class="nav-icon" data-icon="tasks"></span>
         <span class="nav-text">Tasks</span>
       </li>
       <li class="nav-item" data-view="notes">
-        <span class="nav-icon">📓</span>
+        <span class="nav-icon" data-icon="notes"></span>
         <span class="nav-text">Notes</span>
       </li>
       <li class="nav-item" data-view="flashcards">
-        <span class="nav-icon">🃏</span>
+        <span class="nav-icon" data-icon="flashcards"></span>
         <span class="nav-text">Flashcards</span>
       </li>
       <li class="nav-item" data-view="timer">
-        <span class="nav-icon">⏱️</span>
+        <span class="nav-icon" data-icon="timer"></span>
         <span class="nav-text">Study Timer</span>
       </li>
       <li class="nav-item" data-view="analytics">
-        <span class="nav-icon">📈</span>
+        <span class="nav-icon" data-icon="analytics"></span>
         <span class="nav-text">Analytics</span>
       </li>
       <li class="nav-item" data-view="settings">
-        <span class="nav-icon">⚙️</span>
+        <span class="nav-icon" data-icon="settings"></span>
         <span class="nav-text">Settings</span>
       </li>
     </ul>
@@ -777,6 +777,17 @@
   </div>
 
   <script src="icons.js"></script>
+  <script>
+    // Render SVG icons
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('[data-icon]').forEach(el => {
+        const iconName = el.dataset.icon;
+        if (Icons[iconName]) {
+          el.innerHTML = Icons[iconName];
+        }
+      });
+    });
+  </script>
   <script src="utils.js"></script>
   <script src="components.js"></script>
   <script src="charts.js"></script>

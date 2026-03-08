@@ -9,18 +9,21 @@ const DATA_FILE = path.join(app.getPath('userData'), 'classes.json');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 700,
+    width: 1200,
+    height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
+      contextIsolation: false,
+      nodeIntegration: true,
+      webSecurity: false
     },
     icon: path.join(__dirname, 'icon.png')
   });
 
+  // Load main app
   mainWindow.loadFile('index.html');
   mainWindow.setMenu(null);
+  mainWindow.webContents.openDevTools();
 }
 
 function loadClasses() {

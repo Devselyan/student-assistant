@@ -241,9 +241,39 @@ function init() {
   // Start reminder checker
   setInterval(checkReminders, 30000);
 
+  // Initialize navigation - set Dashboard as active
+  appState.currentView = 'dashboard';
+  
+  // Remove active class from ALL nav items first
+  if (navItems) {
+    navItems.forEach(item => {
+      item.classList.remove('active');
+    });
+  }
+  
+  // Find and activate Dashboard nav item
+  const dashboardNavItem = document.querySelector('.nav-item[data-view="dashboard"]');
+  if (dashboardNavItem) {
+    dashboardNavItem.classList.add('active');
+  }
+  
+  // Hide ALL views first
+  document.querySelectorAll('.view').forEach(view => {
+    view.classList.remove('active');
+    view.style.display = 'none';
+  });
+  
+  // Show only Dashboard
+  const dashboardView = document.getElementById('view-dashboard');
+  if (dashboardView) {
+    dashboardView.classList.add('active');
+    dashboardView.style.display = 'block';
+  }
+
   // Render initial view
   renderCurrentView();
-  renderAllViews();
+  
+  console.log('✅ App initialized - Dashboard active, all modals hidden');
 }
 
 function setupNavigation() {
@@ -393,21 +423,26 @@ function setupGlobalEventListeners() {
 }
 
 function setupModalEventListeners() {
-  // Modal close buttons
-  document.querySelectorAll('.modal-close').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const modalId = btn.dataset.modal;
-      closeModal(modalId);
-    });
-  });
-
-  // Close modal on outside click
-  document.querySelectorAll('.modal').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        closeModal(modal.id);
-      }
-    });
+  // Use event delegation for modal close buttons
+  document.addEventListener('click', (e) => {
+    // Close button clicked
+    if (e.target.classList.contains('modal-close')) {
+      const modalId = e.target.dataset.modal;
+      if (modalId) closeModal(modalId);
+      return;
+    }
+    
+    // Modal background clicked (outside click)
+    if (e.target.classList.contains('modal') && !e.target.classList.contains('hidden')) {
+      closeModal(e.target.id);
+      return;
+    }
+    
+    // Cancel button clicked (any button with data-modal attribute)
+    if (e.target.dataset.modal) {
+      closeModal(e.target.dataset.modal);
+      return;
+    }
   });
 
   // Escape key closes modal
@@ -427,15 +462,28 @@ function setupModalEventListeners() {
 function switchView(viewName) {
   appState.currentView = viewName;
 
-  // Update nav items
+  // Clear all active states first
   navItems.forEach(item => {
-    item.classList.toggle('active', item.dataset.view === viewName);
+    item.classList.remove('active');
   });
 
-  // Update views
-  document.querySelectorAll('.view').forEach(view => {
-    view.classList.toggle('active', view.id === `view-${viewName}`);
+  // Update nav items - set only the clicked one as active
+  navItems.forEach(item => {
+    if (item.dataset.view === viewName) {
+      item.classList.add('active');
+    }
   });
+
+  // Hide all views first
+  document.querySelectorAll('.view').forEach(view => {
+    view.classList.remove('active');
+  });
+
+  // Show only the current view
+  const currentViewEl = document.getElementById(`view-${viewName}`);
+  if (currentViewEl) {
+    currentViewEl.classList.add('active');
+  }
 
   // Render the view
   renderCurrentView();
@@ -663,42 +711,120 @@ function renderClassesView() {
   if (!grid) return;
 
   if (appState.classes.length === 0) {
-    grid.innerHTML = '<div class="empty-state"><h3>No classes yet</h3><p>Add your first class to get started</p></div>';
-    return;
-  }
-
-  grid.innerHTML = appState.classes.map(cls => {
-    const teacher = appState.teachers.find(t => t.id === cls.teacherId);
-    const assignmentCount = appState.assignments.filter(a => a.classId === cls.id).length;
-    const examCount = appState.exams.filter(e => e.classId === cls.id).length;
-    const gradeCount = appState.grades.filter(g => g.classId === cls.id).length;
-
-    return `
-      <div class="class-card-full" style="border-top-color: ${cls.color || '#667eea'}">
-        <div class="class-card-header">
-          <h3>${escapeHtml(cls.name)}</h3>
-          <div class="class-card-actions">
-            <button class="btn-icon btn-sm" onclick="editClass('${cls.id}')" title="Edit">✏️</button>
-            <button class="btn-icon btn-sm" onclick="deleteClass('${cls.id}')" title="Delete">🗑️</button>
-          </div>
+    grid.innerHTML = `
+      <div class="empty-state">
+        <h3>📚 No classes yet</h3>
+        <p>Import your class schedule from CSV or add classes manually</p>
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+          <button class="btn btn-primary" onclick="document.getElementById('csvFileInput').click()">📁 Import CSV</button>
+          <button class="btn btn-secondary" onclick="openModal('classModal')">+ Add Class Manually</button>
         </div>
-        <div class="class-card-body">
-          ${teacher ? `<p class="class-teacher">👨‍🏫 ${escapeHtml(teacher.name)}</p>` : ''}
-          <p class="class-time">⏰ ${formatTime(cls.startTime)} - ${formatTime(cls.endTime)}</p>
-          <p class="class-location">📍 ${escapeHtml(cls.location || 'Online')}</p>
-          <p class="class-days">📅 ${cls.days.map(getDayAbbrev).join(', ')}</p>
-        </div>
-        <div class="class-card-stats">
-          <span title="Assignments">📝 ${assignmentCount}</span>
-          <span title="Exams">📋 ${examCount}</span>
-          <span title="Grades">🎯 ${gradeCount}</span>
+        <div style="margin-top: 15px;">
+          <a href="#" onclick="downloadClassTemplate(); return false;" style="color: var(--accent-color);">📥 Download CSV Template</a>
         </div>
       </div>
     `;
-  }).join('');
+    
+    // Setup CSV file input listener
+    const csvInput = document.getElementById('csvFileInput');
+    if (csvInput && !csvInput.dataset.listener) {
+      csvInput.addEventListener('change', handleCSVImport);
+      csvInput.dataset.listener = 'true';
+    }
+    return;
+  }
+
+  grid.innerHTML = `
+    <div class="classes-import-bar" style="background: var(--bg-tertiary); padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <strong>📊 ${appState.classes.length} classes</strong> loaded
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-sm btn-secondary" onclick="downloadClassTemplate()">📥 Template</button>
+        <button class="btn btn-sm btn-primary" onclick="document.getElementById('csvFileInput').click()">📁 Import CSV</button>
+        <button class="btn btn-sm btn-secondary" onclick="openModal('classModal')">+ Add Class</button>
+      </div>
+    </div>
+    ${appState.classes.map(cls => {
+      const teacher = appState.teachers.find(t => t.id === cls.teacherId);
+      const assignmentCount = appState.assignments.filter(a => a.classId === cls.id).length;
+      const examCount = appState.exams.filter(e => e.classId === cls.id).length;
+      const gradeCount = appState.grades.filter(g => g.classId === cls.id).length;
+
+      return `
+        <div class="class-card-full" style="border-top-color: ${cls.color || '#667eea'}">
+          <div class="class-card-header">
+            <h3>${escapeHtml(cls.name)}</h3>
+            <div class="class-card-actions">
+              <button class="btn-icon btn-sm" onclick="editClass('${cls.id}')" title="Edit">✏️</button>
+              <button class="btn-icon btn-sm" onclick="deleteClass('${cls.id}')" title="Delete">🗑️</button>
+            </div>
+          </div>
+          <div class="class-card-body">
+            ${teacher ? `<p class="class-teacher">👨‍🏫 ${escapeHtml(teacher.name)}</p>` : ''}
+            <p class="class-time">⏰ ${formatTime(cls.startTime)} - ${formatTime(cls.endTime)}</p>
+            <p class="class-location">📍 ${escapeHtml(cls.location || 'Online')}</p>
+            <p class="class-days">📅 ${cls.days.map(getDayAbbrev).join(', ')}</p>
+          </div>
+          <div class="class-card-stats">
+            <span title="Assignments">📝 ${assignmentCount}</span>
+            <span title="Exams">📋 ${examCount}</span>
+            <span title="Grades">🎯 ${gradeCount}</span>
+          </div>
+        </div>
+      `;
+    }).join('')}
+  `;
+
+  // Setup CSV file input listener
+  const csvInput = document.getElementById('csvFileInput');
+  if (csvInput && !csvInput.dataset.listener) {
+    csvInput.addEventListener('change', handleCSVImport);
+    csvInput.dataset.listener = 'true';
+  }
 
   // Update teacher selects in forms
   updateTeacherSelects();
+}
+
+function downloadClassTemplate() {
+  const template = `Class Name,Start Time,End Time,Location,Days,Description,Reminder Minutes,Color
+Mathematics 101,09:00,10:30,Room 201,Monday;Wednesday;Friday,Calculus course,15,#667eea
+Physics 201,14:00,15:30,Lab 3,Tuesday;Thursday,Laboratory required,30,#f44336
+English Literature,11:00,12:00,Building A,Monday;Wednesday;Friday,Shakespeare focus,15,#4CAF50
+Computer Science,10:00,11:30,Online,Thursday,Programming basics,20,#FF9800`;
+
+  const blob = new Blob([template], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'class_schedule_template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function handleCSVImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const csvText = event.target.result;
+    const result = importClassesFromCSV(csvText);
+    
+    if (result.success) {
+      if (confirm(`Found ${result.classes.length} classes in CSV. Import them?`)) {
+        appState.classes.push(...result.classes);
+        saveAllData();
+        renderClassesView();
+        alert('Classes imported successfully!');
+      }
+    } else {
+      alert('Error importing CSV: ' + result.error);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
 }
 
 function updateTeacherSelects() {
@@ -4412,6 +4538,7 @@ function openModal(modalId) {
   if (modal) {
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    console.log('Modal opened:', modalId);
   }
 }
 
@@ -4421,7 +4548,7 @@ function closeModal(modalId) {
     modal.classList.add('hidden');
     document.body.style.overflow = '';
     appState.editingId = null;
-    
+
     // Reset form titles
     const titles = {
       'classModal': 'Add New Class',
@@ -4433,11 +4560,12 @@ function closeModal(modalId) {
       'teacherModal': 'Add Teacher',
       'flashcardDeckModal': 'Create Deck'
     };
-    
+
     const titleEl = document.getElementById(modalId.replace('Modal', 'ModalTitle'));
     if (titleEl && titles[modalId]) {
       titleEl.textContent = titles[modalId];
     }
+    console.log('Modal closed:', modalId);
   }
 }
 

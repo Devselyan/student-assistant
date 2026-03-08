@@ -1745,8 +1745,7 @@ a:hover {
 }
 
 .modal.hidden {
-  display: none;
-  opacity: 0;
+  display: none !important;
 }
 
 .modal-content {

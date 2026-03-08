@@ -11,6 +11,15 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.svg">
   <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Critical styles to ensure views are hidden by default */
+    .view { display: none !important; }
+    .view.active { display: block !important; }
+    .nav-item { background: transparent !important; color: var(--text-secondary) !important; }
+    .nav-item.active { background: var(--accent-color) !important; color: white !important; }
+    /* Force hide all views on page load */
+    #view-classes, #view-assignments, #view-exams, #view-grades, #view-timer, #view-notes, #view-flashcards, #view-attendance, #view-tasks, #view-teachers, #view-calendar, #view-resources, #view-settings { display: none !important; }
+  </style>
 </head>
 <body>
   <!-- Navigation Sidebar -->
@@ -20,7 +29,7 @@
       <button id="toggleSidebar" class="btn-icon">☰</button>
     </div>
     <ul class="nav-menu">
-      <li class="nav-item active" data-view="dashboard">
+      <li class="nav-item" data-view="dashboard">
         <span class="nav-icon">📊</span>
         <span class="nav-text">Dashboard</span>
       </li>
@@ -89,7 +98,7 @@
   <!-- Main Content Area -->
   <main class="main-content" id="mainContent">
     <!-- Dashboard View -->
-    <div class="view active" id="view-dashboard">
+    <div class="view" id="view-dashboard">
       <header class="view-header">
         <h2>📊 Dashboard</h2>
         <div class="header-actions">
@@ -190,8 +199,12 @@
     <div class="view" id="view-classes">
       <header class="view-header">
         <h2>📖 My Classes</h2>
-        <button class="btn btn-primary" id="addClassBtn">+ Add Class</button>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" id="importCsvBtn">📁 Import CSV</button>
+          <button class="btn btn-primary" id="addClassBtn">+ Add Class</button>
+        </div>
       </header>
+      <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
       <div class="classes-grid" id="classesGrid">
         <!-- Class cards rendered here -->
       </div>

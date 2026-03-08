@@ -19,7 +19,8 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^40.8.0",
-    "electron-builder": "^26.8.1"
+    "electron-builder": "^26.8.1",
+    "eslint": "^10.0.3"
   },
   "build": {
     "appId": "com.studentassistant.classreminder",
@@ -27,7 +28,10 @@
     "mac": {
       "category": "public.app-category.education",
       "icon": "icon.icns",
-      "target": ["dmg", "zip"]
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "files": [
       "**/*",

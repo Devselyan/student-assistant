@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Class Reminder">
+  <title>Class Reminder</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📚 Class Reminder</h1>
+      <p class="subtitle">Never miss a class again!</p>
+    </header>
+
+    <div class="actions">
+      <button id="addClassBtn" class="btn btn-primary">+ Add Class</button>
+      <button id="importCsvBtn" class="btn btn-secondary">📁 Import CSV</button>
+      <button id="exportBtn" class="btn btn-secondary">📅 Export Calendar</button>
+    </div>
+
+    <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+
+    <div id="classesList" class="classes-list">
+      <!-- Classes will be rendered here -->
+    </div>
+
+    <div id="classForm" class="modal hidden">
+      <div class="modal-content">
+        <h2>Add New Class</h2>
+        <form id="classFormInner">
+          <div class="form-group">
+            <label for="className">Class Name *</label>
+            <input type="text" id="className" required placeholder="e.g., Mathematics 101">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="startTime">Start Time *</label>
+              <input type="time" id="startTime" required>
+            </div>
+            <div class="form-group">
+              <label for="endTime">End Time *</label>
+              <input type="time" id="endTime" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="location">Location / Meeting Link</label>
+            <input type="text" id="location" placeholder="e.g., Zoom link or Room 101">
+          </div>
+
+          <div class="form-group">
+            <label for="description">Description (optional)</label>
+            <textarea id="description" rows="2" placeholder="Notes about this class"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Days *</label>
+            <div class="days-selector">
+              <label class="day-checkbox"><input type="checkbox" name="days" value="Monday"> Mon</label>
+              <label class="day-checkbox"><input type="checkbox" name="days" value="Tuesday"> Tue</label>
+              <label class="day-checkbox"><input type="checkbox" name="days" value="Wednesday"> Wed</label>
+              <label class="day-checkbox"><input type="checkbox" name="days" value="Thursday"> Thu</label>
+              <label class="day-checkbox"><input type="checkbox" name="days" value="Friday"> Fri</label>
+              <label class="day-checkbox"><input type="checkbox" name="days" value="Saturday"> Sat</label>
+              <label class="day-checkbox"><input type="checkbox" name="days" value="Sunday"> Sun</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reminderMinutes">Reminder Before (minutes)</label>
+            <select id="reminderMinutes">
+              <option value="5">5 minutes</option>
+              <option value="10">10 minutes</option>
+              <option value="15" selected>15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
+            </select>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Class</button>
+            <button type="button" id="cancelBtn" class="btn btn-secondary">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="csvPreviewModal" class="modal hidden">
+      <div class="modal-content modal-large">
+        <h2>📁 Preview Imported Classes</h2>
+        <p class="preview-info">Found <span id="classCount">0</span> classes in your CSV file</p>
+        <div id="csvPreview" class="csv-preview">
+          <!-- Preview table will be rendered here -->
+        </div>
+        <div class="form-actions">
+          <button id="confirmImportBtn" class="btn btn-primary">✅ Import All</button>
+          <button id="cancelImportBtn" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="notificationPrompt" class="notification-prompt hidden">
+      <p>🔔 Enable notifications to get class reminders!</p>
+      <button id="enableNotificationsBtn" class="btn btn-primary">Enable</button>
+      <button id="dismissNotificationBtn" class="btn btn-secondary">Not Now</button>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+  <script>
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch(err => console.error('SW registration failed:', err));
+    }
+  </script>
+</body>
+</html>

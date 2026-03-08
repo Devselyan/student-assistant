@@ -99,6 +99,7 @@ function switchView(viewName) {
   if (viewName === 'assignments') renderAssignments();
   if (viewName === 'exams') renderExams();
   if (viewName === 'grades') renderGrades();
+  if (viewName === 'calendar') renderCalendar();
   if (viewName === 'notes') renderNotes();
   if (viewName === 'tasks') renderTasks();
   if (viewName === 'dashboard') renderDashboard();
@@ -227,6 +228,9 @@ function setupEventListeners() {
 
   // Filter buttons
   setupFilters();
+
+  // Calendar navigation
+  setupCalendarNavigation();
 }
 
 function setupFilters() {
@@ -384,44 +388,42 @@ function handleTaskSubmit(e) {
   form.reset();
 }
 
-// ==================== FILE IMPORT (CSV & ICS) ====================
-function handleFileImport(e) {
+// ==================== FILE IMPORT (CSV, ICS, PDF, Images) ====================
+async function handleFileImport(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    try {
-      const content = event.target.result;
-      let classes = [];
-      
-      if (file.name.toLowerCase().endsWith('.ics')) {
-        classes = parseICS(content);
-      } else if (file.name.toLowerCase().endsWith('.csv')) {
-        classes = parseCSV(content);
-      } else {
-        alert('Please select a .csv or .ics file');
-        return;
-      }
-      
-      if (classes.length === 0) {
-        alert('No valid classes found in file.');
-        return;
-      }
-      pendingImportClasses = classes;
-      showCsvPreview(classes);
-    } catch (err) {
-      alert('Error parsing file: ' + err.message);
+  try {
+    // Use the ScheduleImport module
+    const result = await ScheduleImport.importFile(file);
+    
+    if (!result.success) {
+      let message = result.error;
+      if (result.hint) message += '\n\n' + result.hint;
+      alert(message);
+      return;
     }
-  };
-  reader.readAsText(file);
+
+    if (result.classes.length === 0) {
+      alert('No valid classes found in file. Please check the file format.');
+      return;
+    }
+
+    pendingImportClasses = result.classes;
+    
+    // Show preview with format info
+    showCsvPreview(result.classes, result.format);
+  } catch (err) {
+    alert('Error importing file: ' + err.message);
+  }
+
   e.target.value = '';
 }
 
 function parseICS(icsText) {
   const classes = [];
   const events = icsText.split('BEGIN:VEVENT').slice(1);
-  
+
   events.forEach(event => {
     const summary = extractICSField(event, 'SUMMARY');
     const dtstart = extractICSField(event, 'DTSTART');
@@ -429,9 +431,9 @@ function parseICS(icsText) {
     const location = extractICSField(event, 'LOCATION') || 'Online';
     const description = extractICSField(event, 'DESCRIPTION') || '';
     const rrule = extractICSField(event, 'RRULE');
-    
+
     if (!summary || !dtstart || !dtend) return;
-    
+
     // Parse days from RRULE (BYDAY=MO,TU,WE,TH,FR)
     let days = [];
     if (rrule && rrule.includes('BYDAY=')) {
@@ -442,7 +444,7 @@ function parseICS(icsText) {
         if (day) days.push(day);
       });
     }
-    
+
     // If no days specified, try to infer from date
     if (days.length === 0) {
       const dateObj = parseICSDate(dtstart);
@@ -451,11 +453,13 @@ function parseICS(icsText) {
         days = [dayNames[dateObj.getDay()]];
       }
     }
-    
-    const startTime = formatICSTime(dtstart);
-    const endTime = formatICSTime(dtend);
-    
-    if (summary && startTime && endTime && days.length > 0) {
+
+    // Extract times properly from DTSTART and DTEND
+    const startTime = extractTimeFromICSDateTime(dtstart);
+    const endTime = extractTimeFromICSDateTime(dtend);
+
+    // Only add if we have valid times
+    if (summary && startTime && endTime && startTime !== '00:00' && days.length > 0) {
       classes.push({
         id: Date.now().toString() + classes.length,
         name: summary,
@@ -470,14 +474,22 @@ function parseICS(icsText) {
       });
     }
   });
-  
+
   return classes;
 }
 
 function extractICSField(event, fieldName) {
-  const regex = new RegExp(`${fieldName}[:;]([^\\n]+)`, 'i');
+  // Handle fields with parameters like DTSTART;TZID=Europe/Berlin:20250410T100000
+  const regex = new RegExp(`${fieldName}(?:;[^:\\n]+)?:([^\\n]+)`, 'i');
   const match = event.match(regex);
-  return match ? match[1].trim() : '';
+  if (!match) return '';
+  
+  let value = match[1].trim();
+  // Remove timezone prefix if present (e.g., "TZID=Europe/Berlin:")
+  if (value.includes(':')) {
+    value = value.split(':').pop();
+  }
+  return value;
 }
 
 function parseICSDate(dateStr) {
@@ -486,22 +498,40 @@ function parseICSDate(dateStr) {
   const year = parseInt(dateStr.substring(0, 4));
   const month = parseInt(dateStr.substring(4, 6)) - 1;
   const day = parseInt(dateStr.substring(6, 8));
-  
+
   if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
-  
+
   return new Date(year, month, day);
 }
 
 function formatICSTime(dateStr) {
   if (!dateStr) return '';
-  // Format: 20240115T090000
-  if (dateStr.length >= 9 && dateStr.includes('T')) {
+  // Format: 20240115T090000 - extract time part after T
+  if (dateStr.includes('T')) {
     const timePart = dateStr.split('T')[1];
     if (timePart && timePart.length >= 4) {
       const hours = timePart.substring(0, 2);
       const minutes = timePart.substring(2, 4);
       return `${hours}:${minutes}`;
     }
+  }
+  // Fallback for date-only format
+  if (dateStr.length >= 8) {
+    return '00:00';
+  }
+  return '';
+}
+
+function extractTimeFromICSDateTime(dateTimeStr) {
+  if (!dateTimeStr) return '';
+  // Format: 20250410T100000 (with or without timezone)
+  // Extract the time portion after the T
+  const tIndex = dateTimeStr.indexOf('T');
+  if (tIndex > 0 && dateTimeStr.length >= tIndex + 6) {
+    const timePart = dateTimeStr.substring(tIndex + 1, tIndex + 7);
+    const hours = timePart.substring(0, 2);
+    const minutes = timePart.substring(2, 4);
+    return `${hours}:${minutes}`;
   }
   return '';
 }
@@ -619,11 +649,12 @@ function parseDays(daysStr) {
   return days;
 }
 
-function showCsvPreview(classes) {
+function showCsvPreview(classes, format = 'File') {
   document.getElementById('classCount').textContent = classes.length;
   const preview = document.getElementById('csvPreview');
-  
+
   preview.innerHTML = `
+    <p style="margin-bottom: 15px; color: var(--text-secondary);">Imported ${classes.length} class(es) from ${format}</p>
     <table class="csv-table">
       <thead>
         <tr>
@@ -645,7 +676,7 @@ function showCsvPreview(classes) {
       </tbody>
     </table>
   `;
-  
+
   openModal('csvPreviewModal');
 }
 
@@ -662,6 +693,7 @@ function renderAll() {
   renderAssignments();
   renderExams();
   renderGrades();
+  renderCalendar();
   renderNotes();
   renderTasks();
   updateClassSelects();
@@ -737,7 +769,7 @@ function renderClasses() {
       ${cls.teacher ? `<p style="color: var(--text-secondary); margin-bottom: 8px;">👨‍🏫 ${escapeHtml(cls.teacher)}</p>` : ''}
       <div class="class-details">
         <span class="class-detail-item">⏰ ${cls.startTime} - ${cls.endTime}</span>
-        <span class="class-detail-item location-link" style="cursor: pointer; color: var(--primary-color);" onclick="showClassesAtLocation('${escapeHtml(cls.location || 'Online').replace(/'/g, "\\'")}')">📍 ${escapeHtml(cls.location || 'Online')}</span>
+        <span class="class-detail-item">📍 ${escapeHtml(cls.location || 'Online')}</span>
         <span class="class-detail-item">🔔 ${cls.reminderMinutes}min before</span>
       </div>
       <div class="class-details" style="margin-top: 8px;">
@@ -879,6 +911,131 @@ function renderGrades() {
   }).join('');
 }
 
+// ==================== CALENDAR ====================
+let currentCalendarDate = new Date();
+
+function renderCalendar() {
+  const container = document.getElementById('calendarContainer');
+  const monthYear = document.getElementById('currentMonthYear');
+  
+  const year = currentCalendarDate.getFullYear();
+  const month = currentCalendarDate.getMonth();
+  
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+    'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  monthYear.textContent = `${monthNames[month]} ${year}`;
+  
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startingDay = firstDay.getDay();
+  const totalDays = lastDay.getDate();
+  
+  const today = new Date();
+  const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+  
+  // Get all events for this month
+  const events = [];
+  appData.classes.forEach(cls => {
+    cls.days.forEach(dayName => {
+      const dayNum = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(dayName);
+      for (let d = 1; d <= totalDays; d++) {
+        const date = new Date(year, month, d);
+        if (date.getDay() === dayNum) {
+          events.push({
+            date: d,
+            title: cls.name,
+            time: cls.startTime,
+            color: cls.color || '#667eea',
+            type: 'class'
+          });
+        }
+      }
+    });
+  });
+  
+  appData.exams.forEach(exam => {
+    const examDate = new Date(exam.date);
+    if (examDate.getMonth() === month && examDate.getFullYear() === year) {
+      events.push({
+        date: examDate.getDate(),
+        title: exam.title,
+        time: exam.time || 'All day',
+        color: '#f56565',
+        type: 'exam'
+      });
+    }
+  });
+  
+  appData.assignments.forEach(a => {
+    if (!a.completed) {
+      const dueDate = new Date(a.dueDate);
+      if (dueDate.getMonth() === month && dueDate.getFullYear() === year) {
+        events.push({
+          date: dueDate.getDate(),
+          title: a.title,
+          time: 'Due',
+          color: '#ed8936',
+          type: 'assignment'
+        });
+      }
+    }
+  });
+  
+  let html = '<div class="calendar-grid">';
+  html += '<div class="calendar-weekday">Sun</div>';
+  html += '<div class="calendar-weekday">Mon</div>';
+  html += '<div class="calendar-weekday">Tue</div>';
+  html += '<div class="calendar-weekday">Wed</div>';
+  html += '<div class="calendar-weekday">Thu</div>';
+  html += '<div class="calendar-weekday">Fri</div>';
+  html += '<div class="calendar-weekday">Sat</div>';
+  
+  // Empty cells for days before the first day
+  for (let i = 0; i < startingDay; i++) {
+    html += '<div class="calendar-day empty"></div>';
+  }
+  
+  // Day cells
+  for (let d = 1; d <= totalDays; d++) {
+    const dayEvents = events.filter(e => e.date === d);
+    const isToday = isCurrentMonth && d === today.getDate();
+    const dateObj = new Date(year, month, d);
+    const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    html += `<div class="calendar-day ${isToday ? 'today' : ''}" title="${dateStr}">
+      <div class="calendar-day-number">${d}</div>
+      <div class="calendar-events">`;
+    
+    dayEvents.slice(0, 4).forEach(e => {
+      html += `<div class="calendar-event" style="background: ${e.color};" title="${e.title} at ${e.time}">
+        ${e.type === 'class' ? '📖' : e.type === 'exam' ? '📋' : '📝'} ${e.title}
+      </div>`;
+    });
+    
+    if (dayEvents.length > 4) {
+      html += `<div class="calendar-more">+${dayEvents.length - 4} more</div>`;
+    }
+    
+    html += '</div></div>';
+  }
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function setupCalendarNavigation() {
+  document.getElementById('prevMonth')?.addEventListener('click', () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+    renderCalendar();
+  });
+
+  document.getElementById('nextMonth')?.addEventListener('click', () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+    renderCalendar();
+  });
+}
+
 function renderNotes() {
   const grid = document.getElementById('notesGrid');
   
@@ -1000,65 +1157,6 @@ function toggleTask(id) {
     saveData();
     renderTasks();
   }
-}
-
-// ==================== LOCATION FILTER ====================
-function showClassesAtLocation(location) {
-  const classesAtLocation = appData.classes.filter(cls => 
-    (cls.location || 'Online') === location
-  );
-  
-  if (classesAtLocation.length === 0) {
-    alert('No classes found at this location');
-    return;
-  }
-  
-  // Create a new window with the location classes
-  const win = window.open('', '_blank', 'width=600,height=700');
-  
-  const classesHtml = classesAtLocation.map(cls => `
-    <div style="background: #f7fafc; border-left: 4px solid ${cls.color || '#667eea'}; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
-      <h3 style="margin: 0 0 8px 0; color: #1a202c;">${escapeHtml(cls.name)}</h3>
-      ${cls.teacher ? `<p style="margin: 0 0 8px 0; color: #4a5568;">👨‍🏫 ${escapeHtml(cls.teacher)}</p>` : ''}
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.85rem;">
-        <span style="background: #edf2f7; padding: 4px 10px; border-radius: 20px;">⏰ ${cls.startTime} - ${cls.endTime}</span>
-        <span style="background: #edf2f7; padding: 4px 10px; border-radius: 20px;">${cls.days.join(', ')}</span>
-      </div>
-      ${cls.description ? `<p style="margin-top: 10px; font-size: 0.9rem; color: #718096;">${escapeHtml(cls.description)}</p>` : ''}
-    </div>
-  `).join('');
-  
-  win.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>📍 Classes at ${location}</title>
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          padding: 20px;
-          background: #f7fafc;
-          color: #1a202c;
-        }
-        h1 {
-          color: #667eea;
-          margin-bottom: 20px;
-        }
-        .count {
-          color: #4a5568;
-          margin-bottom: 20px;
-        }
-      </style>
-    </head>
-    <body>
-      <h1>📍 Classes at ${location}</h1>
-      <p class="count">${classesAtLocation.length} class(es) at this location</p>
-      ${classesHtml}
-    </body>
-    </html>
-  `);
-  
-  win.document.close();
 }
 
 // ==================== TIMER ====================
@@ -1254,4 +1352,3 @@ window.deleteExam = deleteExam;
 window.deleteGrade = deleteGrade;
 window.deleteTask = deleteTask;
 window.toggleTask = toggleTask;
-window.showClassesAtLocation = showClassesAtLocation;

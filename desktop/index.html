@@ -23,29 +23,17 @@
         <span class="nav-icon">📖</span>
         <span class="nav-text">My Classes</span>
       </li>
-      <li class="nav-item" data-view="assignments">
-        <span class="nav-icon">📝</span>
-        <span class="nav-text">Assignments</span>
-      </li>
       <li class="nav-item" data-view="exams">
         <span class="nav-icon">📋</span>
         <span class="nav-text">Exams</span>
-      </li>
-      <li class="nav-item" data-view="grades">
-        <span class="nav-icon">🎯</span>
-        <span class="nav-text">Grades</span>
       </li>
       <li class="nav-item" data-view="timer">
         <span class="nav-icon">⏱️</span>
         <span class="nav-text">Study Timer</span>
       </li>
-      <li class="nav-item" data-view="notes">
-        <span class="nav-icon">📓</span>
-        <span class="nav-text">Notes</span>
-      </li>
-      <li class="nav-item" data-view="tasks">
-        <span class="nav-icon">✓</span>
-        <span class="nav-text">Tasks</span>
+      <li class="nav-item" data-view="calendar">
+        <span class="nav-icon">📅</span>
+        <span class="nav-text">Calendar</span>
       </li>
       <li class="nav-item" data-view="settings">
         <span class="nav-icon">⚙️</span>
@@ -85,16 +73,6 @@
           </div>
         </div>
 
-        <!-- Upcoming Assignments -->
-        <div class="card card-md">
-          <div class="card-header">
-            <h3>📝 Upcoming Assignments</h3>
-          </div>
-          <div class="card-body" id="upcomingAssignments">
-            <p class="empty-state">No upcoming assignments</p>
-          </div>
-        </div>
-
         <!-- Study Timer Quick Access -->
         <div class="card card-sm">
           <div class="card-header">
@@ -119,9 +97,7 @@
           <div class="card-body">
             <div class="quick-actions">
               <button class="btn btn-primary btn-block" id="quickAddClass">+ Add Class</button>
-              <button class="btn btn-secondary btn-block" id="quickAddAssignment">+ Assignment</button>
-              <button class="btn btn-secondary btn-block" id="quickAddExam">+ Exam</button>
-              <button class="btn btn-secondary btn-block" id="quickAddNote">+ Note</button>
+              <button class="btn btn-secondary btn-block" id="quickAddExam">+ Add Exam</button>
             </div>
           </div>
         </div>
@@ -133,29 +109,13 @@
       <header class="view-header">
         <h2>📖 My Classes</h2>
         <div class="header-actions">
-          <button class="btn btn-secondary" id="importCsvBtn">📁 Import CSV/ICS</button>
+          <button class="btn btn-secondary" id="importCsvBtn">📁 Import Schedule</button>
           <button class="btn btn-primary" id="addClassBtn">+ Add Class</button>
         </div>
       </header>
-      <input type="file" id="importFileInput" accept=".csv,.ics" style="display: none;">
+      <input type="file" id="importFileInput" accept=".csv,.ics,.pdf,.png,.jpg,.jpeg" style="display: none;">
       <div class="classes-grid" id="classesGrid">
         <p class="empty-state">No classes yet. Click "Add Class" to get started!</p>
-      </div>
-    </div>
-
-    <!-- Assignments View -->
-    <div class="view" id="view-assignments">
-      <header class="view-header">
-        <h2>📝 Assignments</h2>
-        <button class="btn btn-primary" id="addAssignmentBtn">+ Add Assignment</button>
-      </header>
-      <div class="assignments-filters">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="pending">Pending</button>
-        <button class="filter-btn" data-filter="completed">Completed</button>
-      </div>
-      <div class="assignments-list" id="assignmentsList">
-        <p class="empty-state">No assignments yet</p>
       </div>
     </div>
 
@@ -171,15 +131,18 @@
       </div>
     </div>
 
-    <!-- Grades View -->
-    <div class="view" id="view-grades">
+    <!-- Calendar View -->
+    <div class="view" id="view-calendar">
       <header class="view-header">
-        <h2>🎯 Grades</h2>
-        <button class="btn btn-primary" id="addGradeBtn">+ Add Grade</button>
+        <h2>📅 Calendar</h2>
+        <div class="calendar-nav">
+          <button class="btn-icon" id="prevMonth">‹</button>
+          <span id="currentMonthYear"></span>
+          <button class="btn-icon" id="nextMonth">›</button>
+        </div>
       </header>
-      <div class="grades-summary" id="gradesSummary"></div>
-      <div class="grades-list" id="gradesList">
-        <p class="empty-state">No grades recorded</p>
+      <div class="calendar-container" id="calendarContainer">
+        <!-- Calendar grid rendered here -->
       </div>
     </div>
 
@@ -358,58 +321,6 @@
         <div class="modal-actions">
           <button type="submit" class="btn btn-primary">Save Class</button>
           <button type="button" class="btn btn-secondary" data-modal="classModal">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Add Assignment Modal -->
-  <div class="modal" id="assignmentModal">
-    <div class="modal-overlay"></div>
-    <div class="modal-content modal-lg">
-      <div class="modal-header">
-        <h3 id="assignmentModalTitle">Add Assignment</h3>
-        <button class="modal-close" data-modal="assignmentModal">×</button>
-      </div>
-      <form id="assignmentForm">
-        <div class="form-group">
-          <label>Assignment Title *</label>
-          <input type="text" name="title" required placeholder="e.g., Chapter 5 Problems">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Class *</label>
-            <select name="classId" id="assignmentClassSelect" required>
-              <option value="">Select Class</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Priority</label>
-            <select name="priority">
-              <option value="low">Low</option>
-              <option value="medium" selected>Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Due Date *</label>
-            <input type="date" name="dueDate" required>
-          </div>
-          <div class="form-group">
-            <label>Due Time</label>
-            <input type="time" name="dueTime" value="23:59">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Description</label>
-          <textarea name="description" rows="3" placeholder="Assignment details, requirements..."></textarea>
-        </div>
-        <div class="modal-actions">
-          <button type="submit" class="btn btn-primary">Save Assignment</button>
-          <button type="button" class="btn btn-secondary" data-modal="assignmentModal">Cancel</button>
         </div>
       </form>
     </div>
@@ -606,6 +517,7 @@
     </div>
   </div>
 
+  <script src="schedule-import.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

@@ -40,6 +40,10 @@
         <span class="nav-icon">🎯</span>
         <span class="nav-text">Grades</span>
       </li>
+      <li class="nav-item" data-view="calendar">
+        <span class="nav-icon">📅</span>
+        <span class="nav-text">Calendar</span>
+      </li>
       <li class="nav-item" data-view="timer">
         <span class="nav-icon">⏱️</span>
         <span class="nav-text">Study Timer</span>
@@ -185,6 +189,21 @@
       <div class="grades-summary" id="gradesSummary"></div>
       <div class="grades-list" id="gradesList">
         <p class="empty-state">No grades recorded</p>
+      </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div class="view" id="view-calendar">
+      <header class="view-header">
+        <h2>📅 Calendar</h2>
+        <div class="calendar-nav">
+          <button class="btn-icon" id="prevMonth">‹</button>
+          <span id="currentMonthYear"></span>
+          <button class="btn-icon" id="nextMonth">›</button>
+        </div>
+      </header>
+      <div class="calendar-container" id="calendarContainer">
+        <!-- Calendar grid rendered here -->
       </div>
     </div>
 

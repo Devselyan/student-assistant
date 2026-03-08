@@ -832,6 +832,106 @@ form {
   margin-top: 5px;
 }
 
+/* ==================== CALENDAR ==================== */
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.calendar-nav #currentMonthYear {
+  font-size: 1.2rem;
+  font-weight: 600;
+  min-width: 200px;
+  text-align: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.calendar-weekday {
+  background: var(--bg-tertiary);
+  padding: 12px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.calendar-day {
+  background: var(--bg-secondary);
+  min-height: 100px;
+  padding: 8px;
+  transition: var(--transition);
+}
+
+.calendar-day:hover {
+  background: var(--bg-tertiary);
+}
+
+.calendar-day.empty {
+  background: var(--bg-primary);
+}
+
+.calendar-day.today {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.calendar-day-number {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.calendar-day.today .calendar-day-number {
+  background: var(--primary-color);
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-events {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-event {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.calendar-event:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+.calendar-more {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2px;
+}
+
 /* ==================== GRADES ==================== */
 .grades-summary {
   display: grid;

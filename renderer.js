@@ -95,6 +95,7 @@ function switchView(viewName) {
   if (viewName === 'assignments') renderAssignments();
   if (viewName === 'exams') renderExams();
   if (viewName === 'grades') renderGrades();
+  if (viewName === 'calendar') renderCalendar();
   if (viewName === 'notes') renderNotes();
   if (viewName === 'tasks') renderTasks();
   if (viewName === 'dashboard') renderDashboard();
@@ -654,6 +655,7 @@ function renderAll() {
   renderAssignments();
   renderExams();
   renderGrades();
+  renderCalendar();
   renderNotes();
   renderTasks();
   updateClassSelects();
@@ -885,6 +887,127 @@ function renderNotes() {
     `;
   }).join('');
 }
+
+// ==================== CALENDAR ====================
+let currentCalendarDate = new Date();
+
+function renderCalendar() {
+  const container = document.getElementById('calendarContainer');
+  const monthYear = document.getElementById('currentMonthYear');
+  
+  const year = currentCalendarDate.getFullYear();
+  const month = currentCalendarDate.getMonth();
+  
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+    'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  monthYear.textContent = `${monthNames[month]} ${year}`;
+  
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startingDay = firstDay.getDay();
+  const totalDays = lastDay.getDate();
+  
+  const today = new Date();
+  const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+  
+  // Get all events for this month
+  const events = [];
+  appData.classes.forEach(cls => {
+    cls.days.forEach(dayName => {
+      const dayNum = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(dayName);
+      for (let d = 1; d <= totalDays; d++) {
+        const date = new Date(year, month, d);
+        if (date.getDay() === dayNum) {
+          events.push({
+            date: d,
+            title: cls.name,
+            time: cls.startTime,
+            color: cls.color || '#667eea',
+            type: 'class'
+          });
+        }
+      }
+    });
+  });
+  
+  appData.exams.forEach(exam => {
+    const examDate = new Date(exam.date);
+    if (examDate.getMonth() === month && examDate.getFullYear() === year) {
+      events.push({
+        date: examDate.getDate(),
+        title: exam.title,
+        time: exam.time || 'All day',
+        color: '#f56565',
+        type: 'exam'
+      });
+    }
+  });
+  
+  appData.assignments.forEach(a => {
+    if (!a.completed) {
+      const dueDate = new Date(a.dueDate);
+      if (dueDate.getMonth() === month && dueDate.getFullYear() === year) {
+        events.push({
+          date: dueDate.getDate(),
+          title: a.title,
+          time: 'Due',
+          color: '#ed8936',
+          type: 'assignment'
+        });
+      }
+    }
+  });
+  
+  let html = '<div class="calendar-grid">';
+  html += '<div class="calendar-weekday">Sun</div>';
+  html += '<div class="calendar-weekday">Mon</div>';
+  html += '<div class="calendar-weekday">Tue</div>';
+  html += '<div class="calendar-weekday">Wed</div>';
+  html += '<div class="calendar-weekday">Thu</div>';
+  html += '<div class="calendar-weekday">Fri</div>';
+  html += '<div class="calendar-weekday">Sat</div>';
+  
+  // Empty cells for days before the first day
+  for (let i = 0; i < startingDay; i++) {
+    html += '<div class="calendar-day empty"></div>';
+  }
+  
+  // Day cells
+  for (let d = 1; d <= totalDays; d++) {
+    const dayEvents = events.filter(e => e.date === d);
+    const isToday = isCurrentMonth && d === today.getDate();
+    
+    html += `<div class="calendar-day ${isToday ? 'today' : ''}">
+      <div class="calendar-day-number">${d}</div>
+      <div class="calendar-events">`;
+    
+    dayEvents.slice(0, 3).forEach(e => {
+      html += `<div class="calendar-event" style="background: ${e.color};" title="${e.title} at ${e.time}">
+        ${e.type === 'class' ? '📖' : e.type === 'exam' ? '📋' : '📝'} ${e.title}
+      </div>`;
+    });
+    
+    if (dayEvents.length > 3) {
+      html += `<div class="calendar-more">+${dayEvents.length - 3} more</div>`;
+    }
+    
+    html += '</div></div>';
+  }
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+document.getElementById('prevMonth')?.addEventListener('click', () => {
+  currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+  renderCalendar();
+});
+
+document.getElementById('nextMonth')?.addEventListener('click', () => {
+  currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+  renderCalendar();
+});
 
 function renderTasks() {
   const list = document.getElementById('tasksList');

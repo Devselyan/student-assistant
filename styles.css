@@ -6,20 +6,20 @@
   --success-color: #48bb78;
   --danger-color: #f56565;
   --warning-color: #ed8936;
-
+  
   --bg-primary: #f7fafc;
   --bg-secondary: #ffffff;
   --bg-tertiary: #edf2f7;
-
+  
   --text-primary: #1a202c;
   --text-secondary: #4a5568;
   --text-muted: #718096;
-
+  
   --border-color: #e2e8f0;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
   --shadow-lg: 0 10px 25px rgba(0,0,0,0.15);
-
+  
   --sidebar-width: 240px;
   --header-height: 60px;
   --transition: all 0.2s ease;
@@ -29,11 +29,11 @@
   --bg-primary: #1a202c;
   --bg-secondary: #2d3748;
   --bg-tertiary: #4a5568;
-
+  
   --text-primary: #f7fafc;
   --text-secondary: #e2e8f0;
   --text-muted: #a0aec0;
-
+  
   --border-color: #4a5568;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
@@ -986,34 +986,34 @@ form {
     z-index: 100;
     transition: var(--transition);
   }
-
+  
   .sidebar.open {
     left: 0;
   }
-
+  
   .view-header {
     flex-direction: column;
     gap: 15px;
     align-items: flex-start;
   }
-
+  
   .header-actions {
     width: 100%;
     justify-content: flex-start;
   }
-
+  
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
-
+  
   .card-lg {
     grid-column: span 1;
   }
-
+  
   .form-row {
     grid-template-columns: 1fr;
   }
-
+  
   .timer-display-large {
     font-size: 3rem;
   }

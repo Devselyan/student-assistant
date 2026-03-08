@@ -3,13 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#667eea">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Student Assistant">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
   <title>Student Assistant Pro</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icon-192.svg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -613,7 +608,7 @@
     </div>
   </div>
 
-  <!-- CSV/ICS Preview Modal -->
+  <!-- CSV Preview Modal -->
   <div class="modal" id="csvPreviewModal">
     <div class="modal-overlay"></div>
     <div class="modal-content modal-lg">
@@ -621,7 +616,7 @@
         <h3>📁 Preview Imported Classes</h3>
         <button class="modal-close" data-modal="csvPreviewModal">×</button>
       </div>
-      <p class="preview-info">Found <span id="classCount">0</span> classes in your file</p>
+      <p class="preview-info">Found <span id="classCount">0</span> classes in your CSV file</p>
       <div id="csvPreview" class="csv-preview"></div>
       <div class="modal-actions">
         <button class="btn btn-primary" id="confirmImportBtn">✅ Import All</button>

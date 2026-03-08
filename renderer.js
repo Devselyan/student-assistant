@@ -1,5 +1,5 @@
-// Student Assistant Pro - Web Version Renderer
-// Uses localStorage instead of Electron IPC
+// Student Assistant Pro - Renderer Process
+// Clean, modular architecture for the rebuilt app
 
 // ==================== STATE ====================
 let appData = {
@@ -32,16 +32,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupTimer();
   renderAll();
   applyTheme();
-  requestNotificationPermission();
-  startReminderChecker();
 });
 
 // ==================== DATA MANAGEMENT ====================
 async function loadData() {
   try {
-    const saved = localStorage.getItem('studentAssistantData');
-    if (saved) {
-      appData = JSON.parse(saved);
+    if (window.electronAPI) {
+      appData = await window.electronAPI.getAllData();
+    } else {
+      // Fallback to localStorage for testing
+      const saved = localStorage.getItem('studentAssistantData');
+      if (saved) appData = JSON.parse(saved);
     }
   } catch (err) {
     console.error('Error loading data:', err);
@@ -50,7 +51,11 @@ async function loadData() {
 
 async function saveData() {
   try {
-    localStorage.setItem('studentAssistantData', JSON.stringify(appData));
+    if (window.electronAPI) {
+      await window.electronAPI.saveAllData(appData);
+    } else {
+      localStorage.setItem('studentAssistantData', JSON.stringify(appData));
+    }
   } catch (err) {
     console.error('Error saving data:', err);
   }
@@ -74,7 +79,6 @@ function setupNavigation() {
   if (toggleBtn && sidebar) {
     toggleBtn.addEventListener('click', () => {
       sidebar.classList.toggle('collapsed');
-      sidebar.classList.toggle('open');
     });
   }
 }
@@ -106,7 +110,8 @@ function setupModals() {
   // Close modal when clicking overlay, close button, or cancel button
   document.addEventListener('click', (e) => {
     const target = e.target;
-    
+    console.log('Click detected on:', target.tagName, target.className, target.getAttribute('data-modal'));
+
     // Close on overlay click
     if (target.classList.contains('modal-overlay')) {
       closeModal(target.closest('.modal'));
@@ -118,6 +123,7 @@ function setupModals() {
     // Close on cancel button click (data-modal attribute)
     if (target.hasAttribute('data-modal')) {
       const modalId = target.getAttribute('data-modal');
+      console.log('Closing modal:', modalId);
       closeModal(modalId);
     }
   });
@@ -185,7 +191,7 @@ function setupEventListeners() {
 
   document.getElementById('importFileInput')?.addEventListener('change', handleFileImport);
 
-  // Import confirmation
+  // CSV Import confirmation
   document.getElementById('confirmImportBtn')?.addEventListener('click', () => {
     appData.classes.push(...pendingImportClasses);
     saveData();
@@ -222,6 +228,9 @@ function setupEventListeners() {
 
   // Filter buttons
   setupFilters();
+
+  // Calendar navigation
+  setupCalendarNavigation();
 }
 
 function setupFilters() {
@@ -477,6 +486,7 @@ function extractICSField(event, fieldName) {
 
 function parseICSDate(dateStr) {
   if (!dateStr) return null;
+  // Format: 20240115T090000 or 20240115
   const year = parseInt(dateStr.substring(0, 4));
   const month = parseInt(dateStr.substring(4, 6)) - 1;
   const day = parseInt(dateStr.substring(6, 8));
@@ -488,6 +498,7 @@ function parseICSDate(dateStr) {
 
 function formatICSTime(dateStr) {
   if (!dateStr) return '';
+  // Format: 20240115T090000
   if (dateStr.length >= 9 && dateStr.includes('T')) {
     const timePart = dateStr.split('T')[1];
     if (timePart && timePart.length >= 4) {
@@ -662,11 +673,14 @@ function renderAll() {
 }
 
 function renderDashboard() {
+  // Today's date
   const today = new Date();
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   document.getElementById('todayDate').textContent = today.toLocaleDateString('en-US', options);
 
+  // Today's schedule
   const currentDay = today.toLocaleDateString('en-US', { weekday: 'long' });
+  const currentTime = today.toTimeString().slice(0, 5);
   
   const todaysClasses = appData.classes.filter(cls => 
     cls.days.includes(currentDay)
@@ -687,6 +701,7 @@ function renderDashboard() {
     `).join('');
   }
 
+  // Upcoming assignments
   const upcomingAssignments = appData.assignments
     .filter(a => !a.completed && a.dueDate)
     .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
@@ -706,6 +721,7 @@ function renderDashboard() {
     `).join('');
   }
 
+  // Study streak
   const streakCount = document.getElementById('streakCount');
   if (streakCount) {
     streakCount.textContent = appData.settings.streak || 0;
@@ -714,7 +730,7 @@ function renderDashboard() {
 
 function renderClasses() {
   const grid = document.getElementById('classesGrid');
-  
+
   if (appData.classes.length === 0) {
     grid.innerHTML = '<p class="empty-state">No classes yet. Click "Add Class" to get started!</p>';
     return;
@@ -786,6 +802,7 @@ function renderExams() {
     return;
   }
 
+  // Countdown cards for upcoming exams
   const today = new Date();
   const upcomingExams = appData.exams
     .filter(e => e.date && new Date(e.date) >= today)
@@ -803,6 +820,7 @@ function renderExams() {
     `;
   }).join('');
 
+  // Full list
   list.innerHTML = appData.exams.map(exam => {
     const cls = appData.classes.find(c => c.id === exam.classId);
     return `
@@ -831,6 +849,7 @@ function renderGrades() {
     return;
   }
 
+  // Calculate average
   const total = appData.grades.reduce((sum, g) => sum + g.grade, 0);
   const avg = (total / appData.grades.length).toFixed(1);
 
@@ -859,29 +878,6 @@ function renderGrades() {
         <div style="display: flex; gap: 8px; align-items: center;">
           <span style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">${g.grade}%</span>
           <button class="btn btn-danger" onclick="deleteGrade('${g.id}')">Delete</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function renderNotes() {
-  const grid = document.getElementById('notesGrid');
-  
-  if (appData.notes.length === 0) {
-    grid.innerHTML = '<p class="empty-state">No notes yet</p>';
-    return;
-  }
-
-  grid.innerHTML = appData.notes.map(note => {
-    const cls = appData.classes.find(c => c.id === note.classId);
-    return `
-      <div class="note-card">
-        <h4>${escapeHtml(note.title)}</h4>
-        <p>${escapeHtml(note.content)}</p>
-        <div class="note-meta">
-          ${cls ? `📚 ${escapeHtml(cls.name)} • ` : ''}
-          ${new Date(note.createdAt).toLocaleDateString()}
         </div>
       </div>
     `;
@@ -977,19 +973,21 @@ function renderCalendar() {
   for (let d = 1; d <= totalDays; d++) {
     const dayEvents = events.filter(e => e.date === d);
     const isToday = isCurrentMonth && d === today.getDate();
+    const dateObj = new Date(year, month, d);
+    const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     
-    html += `<div class="calendar-day ${isToday ? 'today' : ''}">
+    html += `<div class="calendar-day ${isToday ? 'today' : ''}" title="${dateStr}">
       <div class="calendar-day-number">${d}</div>
       <div class="calendar-events">`;
     
-    dayEvents.slice(0, 3).forEach(e => {
+    dayEvents.slice(0, 4).forEach(e => {
       html += `<div class="calendar-event" style="background: ${e.color};" title="${e.title} at ${e.time}">
         ${e.type === 'class' ? '📖' : e.type === 'exam' ? '📋' : '📝'} ${e.title}
       </div>`;
     });
     
-    if (dayEvents.length > 3) {
-      html += `<div class="calendar-more">+${dayEvents.length - 3} more</div>`;
+    if (dayEvents.length > 4) {
+      html += `<div class="calendar-more">+${dayEvents.length - 4} more</div>`;
     }
     
     html += '</div></div>';
@@ -999,15 +997,40 @@ function renderCalendar() {
   container.innerHTML = html;
 }
 
-document.getElementById('prevMonth')?.addEventListener('click', () => {
-  currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-  renderCalendar();
-});
+function setupCalendarNavigation() {
+  document.getElementById('prevMonth')?.addEventListener('click', () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+    renderCalendar();
+  });
 
-document.getElementById('nextMonth')?.addEventListener('click', () => {
-  currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-  renderCalendar();
-});
+  document.getElementById('nextMonth')?.addEventListener('click', () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+    renderCalendar();
+  });
+}
+
+function renderNotes() {
+  const grid = document.getElementById('notesGrid');
+  
+  if (appData.notes.length === 0) {
+    grid.innerHTML = '<p class="empty-state">No notes yet</p>';
+    return;
+  }
+
+  grid.innerHTML = appData.notes.map(note => {
+    const cls = appData.classes.find(c => c.id === note.classId);
+    return `
+      <div class="note-card">
+        <h4>${escapeHtml(note.title)}</h4>
+        <p>${escapeHtml(note.content)}</p>
+        <div class="note-meta">
+          ${cls ? `📚 ${escapeHtml(cls.name)} • ` : ''}
+          ${new Date(note.createdAt).toLocaleDateString()}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 
 function renderTasks() {
   const list = document.getElementById('tasksList');
@@ -1125,6 +1148,7 @@ function setupTimer() {
   document.getElementById('mainTimerPause')?.addEventListener('click', pauseTimer);
   document.getElementById('mainTimerReset')?.addEventListener('click', resetTimer);
 
+  // Quick timer
   document.getElementById('quickTimerStart')?.addEventListener('click', toggleQuickTimer);
   document.getElementById('quickTimerReset')?.addEventListener('click', resetQuickTimer);
 }
@@ -1169,6 +1193,7 @@ function startTimer() {
       clearInterval(timerInterval);
       timerRunning = false;
       document.getElementById('mainTimerStart').textContent = 'Start';
+      // Play sound or show notification
       alert('Timer complete!');
     }
   }, 1000);
@@ -1219,6 +1244,7 @@ function applyTheme() {
     document.documentElement.setAttribute('data-theme', 'light');
     document.getElementById('themeToggle').textContent = '🌙';
   } else {
+    // Auto - check system preference
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
     document.getElementById('themeToggle').textContent = prefersDark ? '☀️' : '🌙';
@@ -1230,85 +1256,43 @@ function applyTheme() {
   document.getElementById('enableNotifications').checked = appData.settings.notifications;
 }
 
-// ==================== NOTIFICATIONS ====================
-function requestNotificationPermission() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-}
-
-function sendClassReminder(cls) {
-  if (Notification.permission === 'granted') {
-    new Notification(`📚 Class Reminder: ${cls.name}`, {
-      body: `${cls.name} starts at ${cls.startTime} in ${cls.location || 'online'}`,
-      icon: 'icon-192.svg'
-    });
-  }
-}
-
-function startReminderChecker() {
-  setInterval(() => {
-    if (!appData.settings.notifications) return;
-    
-    const now = new Date();
-    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
-    const currentTime = now.toTimeString().slice(0, 5);
-
-    appData.classes.forEach(cls => {
-      if (cls.days.includes(currentDay) && cls.startTime <= currentTime) {
-        const reminderTime = new Date();
-        reminderTime.setHours(
-          parseInt(cls.startTime.split(':')[0]),
-          parseInt(cls.startTime.split(':')[1]) - (cls.reminderMinutes || 15),
-          0
-        );
-
-        if (now >= reminderTime && now < new Date(reminderTime.getTime() + 60000)) {
-          sendClassReminder(cls);
-        }
-      }
-    });
-  }, 30000);
-}
-
 // ==================== EXPORT/IMPORT ====================
-function exportData() {
-  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'student-data.json';
-  a.click();
-  URL.revokeObjectURL(url);
+async function exportData() {
+  if (window.electronAPI) {
+    const content = await window.electronAPI.exportData();
+    const result = await window.electronAPI.showSaveDialog(content, 'student-data.json');
+    if (result.success) {
+      alert('Data exported successfully!');
+    }
+  } else {
+    const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'student-data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 }
 
-function importData() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
+async function importData() {
+  if (window.electronAPI) {
+    const result = await window.electronAPI.showOpenDialog();
+    if (result.success) {
       try {
-        const imported = JSON.parse(event.target.result);
+        const imported = JSON.parse(result.content);
         appData = imported;
-        saveData();
+        await saveData();
         renderAll();
-        applyTheme();
         alert('Data imported successfully!');
       } catch (err) {
         alert('Error importing data: ' + err.message);
       }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
+    }
+  }
 }
 
-function clearAllData() {
+async function clearAllData() {
   if (confirm('⚠️ Are you sure you want to delete ALL data? This cannot be undone!')) {
     if (confirm('Really sure? This will delete all classes, assignments, exams, grades, notes, and tasks.')) {
       appData = {
@@ -1325,7 +1309,7 @@ function clearAllData() {
           defaultReminderMinutes: 15
         }
       };
-      saveData();
+      await saveData();
       renderAll();
       applyTheme();
       alert('All data cleared.');

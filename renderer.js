@@ -425,7 +425,7 @@ function handleFileImport(e) {
 function parseICS(icsText) {
   const classes = [];
   const events = icsText.split('BEGIN:VEVENT').slice(1);
-  
+
   events.forEach(event => {
     const summary = extractICSField(event, 'SUMMARY');
     const dtstart = extractICSField(event, 'DTSTART');
@@ -433,9 +433,9 @@ function parseICS(icsText) {
     const location = extractICSField(event, 'LOCATION') || 'Online';
     const description = extractICSField(event, 'DESCRIPTION') || '';
     const rrule = extractICSField(event, 'RRULE');
-    
+
     if (!summary || !dtstart || !dtend) return;
-    
+
     // Parse days from RRULE (BYDAY=MO,TU,WE,TH,FR)
     let days = [];
     if (rrule && rrule.includes('BYDAY=')) {
@@ -446,7 +446,7 @@ function parseICS(icsText) {
         if (day) days.push(day);
       });
     }
-    
+
     // If no days specified, try to infer from date
     if (days.length === 0) {
       const dateObj = parseICSDate(dtstart);
@@ -455,11 +455,12 @@ function parseICS(icsText) {
         days = [dayNames[dateObj.getDay()]];
       }
     }
-    
+
     const startTime = formatICSTime(dtstart);
     const endTime = formatICSTime(dtend);
-    
-    if (summary && startTime && endTime && days.length > 0) {
+
+    // Only add if we have valid times
+    if (summary && startTime && endTime && startTime !== '00:00' && days.length > 0) {
       classes.push({
         id: Date.now().toString() + classes.length,
         name: summary,
@@ -474,14 +475,22 @@ function parseICS(icsText) {
       });
     }
   });
-  
+
   return classes;
 }
 
 function extractICSField(event, fieldName) {
-  const regex = new RegExp(`${fieldName}[:;]([^\\n]+)`, 'i');
+  // Handle fields with parameters like DTSTART;TZID=Europe/Berlin:20250410T100000
+  const regex = new RegExp(`${fieldName}(?:;[^:\\n]+)?:([^\\n]+)`, 'i');
   const match = event.match(regex);
-  return match ? match[1].trim() : '';
+  if (!match) return '';
+  
+  let value = match[1].trim();
+  // Remove timezone prefix if present (e.g., "TZID=Europe/Berlin:")
+  if (value.includes(':')) {
+    value = value.split(':').pop();
+  }
+  return value;
 }
 
 function parseICSDate(dateStr) {
@@ -490,22 +499,26 @@ function parseICSDate(dateStr) {
   const year = parseInt(dateStr.substring(0, 4));
   const month = parseInt(dateStr.substring(4, 6)) - 1;
   const day = parseInt(dateStr.substring(6, 8));
-  
+
   if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
-  
+
   return new Date(year, month, day);
 }
 
 function formatICSTime(dateStr) {
   if (!dateStr) return '';
-  // Format: 20240115T090000
-  if (dateStr.length >= 9 && dateStr.includes('T')) {
+  // Format: 20240115T090000 - extract time part after T
+  if (dateStr.includes('T')) {
     const timePart = dateStr.split('T')[1];
     if (timePart && timePart.length >= 4) {
       const hours = timePart.substring(0, 2);
       const minutes = timePart.substring(2, 4);
       return `${hours}:${minutes}`;
     }
+  }
+  // Fallback for date-only format
+  if (dateStr.length >= 8) {
+    return '00:00';
   }
   return '';
 }

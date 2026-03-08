@@ -1,5 +1,5 @@
-// Student Assistant Pro - Renderer Process
-// Clean, modular architecture for the rebuilt app
+// Student Assistant Pro - Main Renderer
+// Comprehensive implementation of all features
 
 // ==================== STATE ====================
 let appData = {
@@ -9,11 +9,16 @@ let appData = {
   grades: [],
   notes: [],
   tasks: [],
+  flashcards: [],
+  studySessions: [],
   settings: {
     theme: 'auto',
     accentColor: '#667eea',
     notifications: true,
-    defaultReminderMinutes: 15
+    defaultReminderMinutes: 15,
+    pomodoroDuration: 25,
+    shortBreakDuration: 5,
+    longBreakDuration: 15
   }
 };
 
@@ -22,6 +27,7 @@ let timerInterval = null;
 let timerSeconds = 25 * 60;
 let timerRunning = false;
 let timerMode = 'pomodoro';
+let currentCalendarDate = new Date();
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -30,20 +36,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupModals();
   setupEventListeners();
   setupTimer();
+  setupCommandPalette();
+  applySettings();
   renderAll();
-  applyTheme();
+  startReminderChecker();
 });
 
 // ==================== DATA MANAGEMENT ====================
 async function loadData() {
   try {
-    if (window.electronAPI) {
-      appData = await window.electronAPI.getAllData();
-    } else {
-      // Fallback to localStorage for testing
-      const saved = localStorage.getItem('studentAssistantData');
-      if (saved) appData = JSON.parse(saved);
-    }
+    const saved = localStorage.getItem('studentAssistantData');
+    if (saved) appData = JSON.parse(saved);
   } catch (err) {
     console.error('Error loading data:', err);
   }
@@ -51,11 +54,7 @@ async function loadData() {
 
 async function saveData() {
   try {
-    if (window.electronAPI) {
-      await window.electronAPI.saveAllData(appData);
-    } else {
-      localStorage.setItem('studentAssistantData', JSON.stringify(appData));
-    }
+    localStorage.setItem('studentAssistantData', JSON.stringify(appData));
   } catch (err) {
     console.error('Error saving data:', err);
   }
@@ -63,77 +62,65 @@ async function saveData() {
 
 // ==================== NAVIGATION ====================
 function setupNavigation() {
-  const navItems = document.querySelectorAll('.nav-item');
-  
-  navItems.forEach(item => {
+  document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
       const viewName = item.dataset.view;
       switchView(viewName);
     });
   });
 
-  // Sidebar toggle
-  const toggleBtn = document.getElementById('toggleSidebar');
-  const sidebar = document.getElementById('sidebar');
-  
-  if (toggleBtn && sidebar) {
-    toggleBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('collapsed');
-    });
-  }
+  document.getElementById('toggleSidebar')?.addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  });
 }
 
 function switchView(viewName) {
-  // Update nav items
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.view === viewName);
   });
 
-  // Update views
   document.querySelectorAll('.view').forEach(view => {
     view.classList.toggle('active', view.id === `view-${viewName}`);
   });
 
   // Render view-specific content
-  if (viewName === 'classes') renderClasses();
-  if (viewName === 'assignments') renderAssignments();
-  if (viewName === 'exams') renderExams();
-  if (viewName === 'grades') renderGrades();
-  if (viewName === 'calendar') renderCalendar();
-  if (viewName === 'notes') renderNotes();
-  if (viewName === 'tasks') renderTasks();
-  if (viewName === 'dashboard') renderDashboard();
+  const renderFunctions = {
+    dashboard: renderDashboard,
+    classes: renderClasses,
+    calendar: renderCalendar,
+    assignments: renderAssignments,
+    exams: renderExams,
+    grades: renderGrades,
+    tasks: renderTasks,
+    notes: renderNotes,
+    flashcards: renderFlashcards,
+    timer: () => {},
+    analytics: renderAnalytics,
+    settings: renderSettings
+  };
+
+  if (renderFunctions[viewName]) {
+    renderFunctions[viewName]();
+  }
 }
 
 // ==================== MODALS ====================
 function setupModals() {
-  // Close modal when clicking overlay, close button, or cancel button
   document.addEventListener('click', (e) => {
-    const target = e.target;
-    console.log('Click detected on:', target.tagName, target.className, target.getAttribute('data-modal'));
-
-    // Close on overlay click
-    if (target.classList.contains('modal-overlay')) {
-      closeModal(target.closest('.modal'));
+    if (e.target.classList.contains('modal-overlay')) {
+      closeModal(e.target.closest('.modal'));
     }
-    // Close on X button click
-    if (target.classList.contains('modal-close')) {
-      closeModal(target.closest('.modal'));
+    if (e.target.classList.contains('modal-close')) {
+      closeModal(e.target.closest('.modal'));
     }
-    // Close on cancel button click (data-modal attribute)
-    if (target.hasAttribute('data-modal')) {
-      const modalId = target.getAttribute('data-modal');
-      console.log('Closing modal:', modalId);
-      closeModal(modalId);
+    if (e.target.hasAttribute('data-modal')) {
+      closeModal(e.target.getAttribute('data-modal'));
     }
   });
 
-  // Close modal on Escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      document.querySelectorAll('.modal.open').forEach(modal => {
-        closeModal(modal);
-      });
+      document.querySelectorAll('.modal.open').forEach(modal => closeModal(modal));
     }
   });
 
@@ -141,9 +128,10 @@ function setupModals() {
   document.getElementById('classForm')?.addEventListener('submit', handleClassSubmit);
   document.getElementById('assignmentForm')?.addEventListener('submit', handleAssignmentSubmit);
   document.getElementById('examForm')?.addEventListener('submit', handleExamSubmit);
-  document.getElementById('noteForm')?.addEventListener('submit', handleNoteSubmit);
   document.getElementById('gradeForm')?.addEventListener('submit', handleGradeSubmit);
   document.getElementById('taskForm')?.addEventListener('submit', handleTaskSubmit);
+  document.getElementById('noteForm')?.addEventListener('submit', handleNoteSubmit);
+  document.getElementById('flashcardDeckForm')?.addEventListener('submit', handleFlashcardDeckSubmit);
 }
 
 function openModal(modalId) {
@@ -155,14 +143,10 @@ function openModal(modalId) {
 }
 
 function closeModal(modal) {
-  if (typeof modal === 'string') {
-    modal = document.getElementById(modal);
-  }
+  if (typeof modal === 'string') modal = document.getElementById(modal);
   if (modal) {
     modal.classList.remove('open');
     document.body.style.overflow = '';
-    
-    // Reset form if exists
     const form = modal.querySelector('form');
     if (form) form.reset();
   }
@@ -170,71 +154,72 @@ function closeModal(modal) {
 
 // ==================== EVENT LISTENERS ====================
 function setupEventListeners() {
-  // Quick action buttons
+  // Quick actions
   document.getElementById('quickAddClass')?.addEventListener('click', () => openModal('classModal'));
   document.getElementById('quickAddAssignment')?.addEventListener('click', () => openModal('assignmentModal'));
   document.getElementById('quickAddExam')?.addEventListener('click', () => openModal('examModal'));
   document.getElementById('quickAddNote')?.addEventListener('click', () => openModal('noteModal'));
 
-  // Header action buttons
+  // Header buttons
   document.getElementById('addClassBtn')?.addEventListener('click', () => openModal('classModal'));
   document.getElementById('addAssignmentBtn')?.addEventListener('click', () => openModal('assignmentModal'));
   document.getElementById('addExamBtn')?.addEventListener('click', () => openModal('examModal'));
   document.getElementById('addGradeBtn')?.addEventListener('click', () => openModal('gradeModal'));
-  document.getElementById('addNoteBtn')?.addEventListener('click', () => openModal('noteModal'));
   document.getElementById('addTaskBtn')?.addEventListener('click', () => openModal('taskModal'));
+  document.getElementById('addNoteBtn')?.addEventListener('click', () => openModal('noteModal'));
+  document.getElementById('addDeckBtn')?.addEventListener('click', () => openModal('flashcardDeckModal'));
 
-  // CSV/ICS Import
+  // Import
   document.getElementById('importCsvBtn')?.addEventListener('click', () => {
     document.getElementById('importFileInput')?.click();
   });
-
   document.getElementById('importFileInput')?.addEventListener('change', handleFileImport);
+  document.getElementById('confirmImportBtn')?.addEventListener('click', confirmImport);
 
-  // CSV Import confirmation
-  document.getElementById('confirmImportBtn')?.addEventListener('click', () => {
-    appData.classes.push(...pendingImportClasses);
-    saveData();
-    renderClasses();
-    closeModal('csvPreviewModal');
-    alert('Classes imported successfully!');
-  });
-
-  // Theme toggle
+  // Theme
   document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
+  document.getElementById('openCommandPalette')?.addEventListener('click', openCommandPalette);
 
   // Settings
   document.getElementById('themeSelect')?.addEventListener('change', (e) => {
     appData.settings.theme = e.target.value;
-    applyTheme();
+    applySettings();
     saveData();
   });
-
   document.getElementById('accentColor')?.addEventListener('input', (e) => {
     appData.settings.accentColor = e.target.value;
     document.documentElement.style.setProperty('--primary-color', e.target.value);
     saveData();
   });
-
   document.getElementById('enableNotifications')?.addEventListener('change', (e) => {
     appData.settings.notifications = e.target.checked;
     saveData();
   });
+  document.getElementById('pomodoroDuration')?.addEventListener('change', (e) => {
+    appData.settings.pomodoroDuration = parseInt(e.target.value);
+    timerSeconds = appData.settings.pomodoroDuration * 60;
+    updateTimerDisplay();
+    saveData();
+  });
+  document.getElementById('shortBreakDuration')?.addEventListener('change', (e) => {
+    appData.settings.shortBreakDuration = parseInt(e.target.value);
+    saveData();
+  });
+  document.getElementById('longBreakDuration')?.addEventListener('change', (e) => {
+    appData.settings.longBreakDuration = parseInt(e.target.value);
+    saveData();
+  });
 
-  // Export/Import data
+  // Data management
   document.getElementById('exportDataBtn')?.addEventListener('click', exportData);
   document.getElementById('importDataBtn')?.addEventListener('click', importData);
   document.getElementById('clearAllDataBtn')?.addEventListener('click', clearAllData);
 
-  // Filter buttons
+  // Filters
   setupFilters();
-
-  // Calendar navigation
-  setupCalendarNavigation();
 }
 
 function setupFilters() {
-  // Assignment filters
   document.querySelectorAll('.assignments-filters .filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.assignments-filters .filter-btn').forEach(b => b.classList.remove('active'));
@@ -242,24 +227,13 @@ function setupFilters() {
       renderAssignments(btn.dataset.filter);
     });
   });
-
-  // Task filters
-  document.querySelectorAll('.tasks-filters .filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tasks-filters .filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderTasks(btn.dataset.filter);
-    });
-  });
 }
 
 // ==================== FORM HANDLERS ====================
 function handleClassSubmit(e) {
   e.preventDefault();
-  const form = e.target;
-  const formData = new FormData(form);
-  
-  const newClass = {
+  const formData = new FormData(e.target);
+  appData.classes.push({
     id: Date.now().toString(),
     name: formData.get('name'),
     teacher: formData.get('teacher') || '',
@@ -270,21 +244,16 @@ function handleClassSubmit(e) {
     days: Array.from(formData.getAll('days')),
     color: formData.get('color') || '#667eea',
     reminderMinutes: parseInt(formData.get('reminderMinutes')) || 15
-  };
-
-  appData.classes.push(newClass);
+  });
   saveData();
   renderClasses();
   closeModal('classModal');
-  form.reset();
 }
 
 function handleAssignmentSubmit(e) {
   e.preventDefault();
-  const form = e.target;
-  const formData = new FormData(form);
-  
-  const newAssignment = {
+  const formData = new FormData(e.target);
+  appData.assignments.push({
     id: Date.now().toString(),
     title: formData.get('title'),
     classId: formData.get('classId'),
@@ -293,21 +262,16 @@ function handleAssignmentSubmit(e) {
     dueTime: formData.get('dueTime'),
     description: formData.get('description') || '',
     completed: false
-  };
-
-  appData.assignments.push(newAssignment);
+  });
   saveData();
   renderAssignments();
   closeModal('assignmentModal');
-  form.reset();
 }
 
 function handleExamSubmit(e) {
   e.preventDefault();
-  const form = e.target;
-  const formData = new FormData(form);
-  
-  const newExam = {
+  const formData = new FormData(e.target);
+  appData.exams.push({
     id: Date.now().toString(),
     title: formData.get('title'),
     classId: formData.get('classId'),
@@ -316,344 +280,100 @@ function handleExamSubmit(e) {
     time: formData.get('time') || '',
     location: formData.get('location') || '',
     topics: formData.get('topics') || ''
-  };
-
-  appData.exams.push(newExam);
+  });
   saveData();
   renderExams();
   closeModal('examModal');
-  form.reset();
-}
-
-function handleNoteSubmit(e) {
-  e.preventDefault();
-  const form = e.target;
-  const formData = new FormData(form);
-  
-  const newNote = {
-    id: Date.now().toString(),
-    title: formData.get('title'),
-    classId: formData.get('classId') || '',
-    tags: formData.get('tags') || '',
-    content: formData.get('content'),
-    createdAt: new Date().toISOString()
-  };
-
-  appData.notes.push(newNote);
-  saveData();
-  renderNotes();
-  closeModal('noteModal');
-  form.reset();
 }
 
 function handleGradeSubmit(e) {
   e.preventDefault();
-  const form = e.target;
-  const formData = new FormData(form);
-  
-  const newGrade = {
+  const formData = new FormData(e.target);
+  appData.grades.push({
     id: Date.now().toString(),
     classId: formData.get('classId'),
     name: formData.get('name'),
     grade: parseFloat(formData.get('grade')),
     weight: parseFloat(formData.get('weight')) || 0,
     date: formData.get('date') || new Date().toISOString().split('T')[0]
-  };
-
-  appData.grades.push(newGrade);
+  });
   saveData();
   renderGrades();
   closeModal('gradeModal');
-  form.reset();
 }
 
 function handleTaskSubmit(e) {
   e.preventDefault();
-  const form = e.target;
-  const formData = new FormData(form);
-  
-  const newTask = {
+  const formData = new FormData(e.target);
+  appData.tasks.push({
     id: Date.now().toString(),
     title: formData.get('title'),
     dueDate: formData.get('dueDate') || '',
     priority: formData.get('priority'),
     notes: formData.get('notes') || '',
-    completed: false
-  };
-
-  appData.tasks.push(newTask);
+    completed: false,
+    status: 'todo'
+  });
   saveData();
   renderTasks();
   closeModal('taskModal');
-  form.reset();
 }
 
-// ==================== FILE IMPORT (CSV, ICS, PDF, Images) ====================
+function handleNoteSubmit(e) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  appData.notes.push({
+    id: Date.now().toString(),
+    title: formData.get('title'),
+    folderId: formData.get('folderId') || '',
+    tags: formData.get('tags') || '',
+    content: formData.get('content'),
+    createdAt: new Date().toISOString()
+  });
+  saveData();
+  renderNotes();
+  closeModal('noteModal');
+}
+
+function handleFlashcardDeckSubmit(e) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  appData.flashcards.push({
+    id: Date.now().toString(),
+    name: formData.get('name'),
+    description: formData.get('description') || '',
+    cards: [],
+    createdAt: new Date().toISOString()
+  });
+  saveData();
+  renderFlashcards();
+  closeModal('flashcardDeckModal');
+}
+
+// ==================== FILE IMPORT ====================
 async function handleFileImport(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  try {
-    // Use the ScheduleImport module
-    const result = await ScheduleImport.importFile(file);
-    
-    if (!result.success) {
-      let message = result.error;
-      if (result.hint) message += '\n\n' + result.hint;
-      alert(message);
-      return;
-    }
-
-    if (result.classes.length === 0) {
-      alert('No valid classes found in file. Please check the file format.');
-      return;
-    }
-
-    pendingImportClasses = result.classes;
-    
-    // Show preview with format info
-    showCsvPreview(result.classes, result.format);
-  } catch (err) {
-    alert('Error importing file: ' + err.message);
+  const result = await ScheduleImport.importFile(file);
+  
+  if (!result.success) {
+    alert(result.error + (result.hint ? '\n\n' + result.hint : ''));
+    return;
   }
 
+  if (result.classes.length === 0) {
+    alert('No valid classes found in file.');
+    return;
+  }
+
+  pendingImportClasses = result.classes;
+  showImportPreview(result.classes, result.format);
   e.target.value = '';
 }
 
-function parseICS(icsText) {
-  const classes = [];
-  const events = icsText.split('BEGIN:VEVENT').slice(1);
-
-  events.forEach(event => {
-    const summary = extractICSField(event, 'SUMMARY');
-    const dtstart = extractICSField(event, 'DTSTART');
-    const dtend = extractICSField(event, 'DTEND');
-    const location = extractICSField(event, 'LOCATION') || 'Online';
-    const description = extractICSField(event, 'DESCRIPTION') || '';
-    const rrule = extractICSField(event, 'RRULE');
-
-    if (!summary || !dtstart || !dtend) return;
-
-    // Parse days from RRULE (BYDAY=MO,TU,WE,TH,FR)
-    let days = [];
-    if (rrule && rrule.includes('BYDAY=')) {
-      const byDay = rrule.match(/BYDAY=([^\n;]+)/)?.[1] || '';
-      const dayMap = { 'MO': 'Monday', 'TU': 'Tuesday', 'WE': 'Wednesday', 'TH': 'Thursday', 'FR': 'Friday', 'SA': 'Saturday', 'SU': 'Sunday' };
-      byDay.split(',').forEach(d => {
-        const day = dayMap[d.trim()];
-        if (day) days.push(day);
-      });
-    }
-
-    // If no days specified, try to infer from date
-    if (days.length === 0) {
-      const dateObj = parseICSDate(dtstart);
-      if (dateObj) {
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        days = [dayNames[dateObj.getDay()]];
-      }
-    }
-
-    // Extract times properly from DTSTART and DTEND
-    const startTime = extractTimeFromICSDateTime(dtstart);
-    const endTime = extractTimeFromICSDateTime(dtend);
-
-    // Only add if we have valid times
-    if (summary && startTime && endTime && startTime !== '00:00' && days.length > 0) {
-      classes.push({
-        id: Date.now().toString() + classes.length,
-        name: summary,
-        teacher: '',
-        startTime,
-        endTime,
-        location: location || 'Online',
-        description: description || '',
-        days: days,
-        color: '#667eea',
-        reminderMinutes: 15
-      });
-    }
-  });
-
-  return classes;
-}
-
-function extractICSField(event, fieldName) {
-  // Handle fields with parameters like DTSTART;TZID=Europe/Berlin:20250410T100000
-  const regex = new RegExp(`${fieldName}(?:;[^:\\n]+)?:([^\\n]+)`, 'i');
-  const match = event.match(regex);
-  if (!match) return '';
-  
-  let value = match[1].trim();
-  // Remove timezone prefix if present (e.g., "TZID=Europe/Berlin:")
-  if (value.includes(':')) {
-    value = value.split(':').pop();
-  }
-  return value;
-}
-
-function parseICSDate(dateStr) {
-  if (!dateStr) return null;
-  // Format: 20240115T090000 or 20240115
-  const year = parseInt(dateStr.substring(0, 4));
-  const month = parseInt(dateStr.substring(4, 6)) - 1;
-  const day = parseInt(dateStr.substring(6, 8));
-
-  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
-
-  return new Date(year, month, day);
-}
-
-function formatICSTime(dateStr) {
-  if (!dateStr) return '';
-  // Format: 20240115T090000 - extract time part after T
-  if (dateStr.includes('T')) {
-    const timePart = dateStr.split('T')[1];
-    if (timePart && timePart.length >= 4) {
-      const hours = timePart.substring(0, 2);
-      const minutes = timePart.substring(2, 4);
-      return `${hours}:${minutes}`;
-    }
-  }
-  // Fallback for date-only format
-  if (dateStr.length >= 8) {
-    return '00:00';
-  }
-  return '';
-}
-
-function extractTimeFromICSDateTime(dateTimeStr) {
-  if (!dateTimeStr) return '';
-  // Format: 20250410T100000 (with or without timezone)
-  // Extract the time portion after the T
-  const tIndex = dateTimeStr.indexOf('T');
-  if (tIndex > 0 && dateTimeStr.length >= tIndex + 6) {
-    const timePart = dateTimeStr.substring(tIndex + 1, tIndex + 7);
-    const hours = timePart.substring(0, 2);
-    const minutes = timePart.substring(2, 4);
-    return `${hours}:${minutes}`;
-  }
-  return '';
-}
-
-function parseCSV(csvText) {
-  const lines = csvText.split('\n').filter(line => line.trim());
-  if (lines.length < 2) return [];
-
-  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
-  const requiredFields = ['class name', 'start time', 'end time', 'days'];
-  const missingFields = requiredFields.filter(field => !headers.includes(field));
-
-  if (missingFields.length > 0) {
-    throw new Error(`Missing required columns: ${missingFields.join(', ')}`);
-  }
-
-  const classes = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
-    if (values.length < headers.length) continue;
-
-    const row = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index] ? values[index].replace(/^"|"$/g, '').trim() : '';
-    });
-
-    const classObj = {
-      id: Date.now().toString() + i,
-      name: row['class name'] || row['class'],
-      startTime: parseTime(row['start time']),
-      endTime: parseTime(row['end time']),
-      location: row['location'] || row['place'] || 'Online',
-      description: row['description'] || row['notes'] || '',
-      days: parseDays(row['days']),
-      color: '#667eea',
-      reminderMinutes: parseInt(row['reminder minutes'] || row['reminder'] || '15')
-    };
-
-    if (classObj.name && classObj.startTime && classObj.days.length > 0) {
-      classes.push(classObj);
-    }
-  }
-
-  return classes;
-}
-
-function parseCSVLine(line) {
-  const result = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-  return result;
-}
-
-function parseTime(timeStr) {
-  if (!timeStr) return '';
-  timeStr = timeStr.trim();
-
-  const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
-  if (timeMatch) {
-    let hours = parseInt(timeMatch[1]);
-    const minutes = timeMatch[2].padStart(2, '0');
-    const ampm = timeMatch[3];
-
-    if (ampm) {
-      if (ampm.toUpperCase() === 'PM' && hours !== 12) {
-        hours += 12;
-      } else if (ampm.toUpperCase() === 'AM' && hours === 12) {
-        hours = 0;
-      }
-    }
-
-    return `${hours.toString().padStart(2, '0')}:${minutes}`;
-  }
-
-  return timeStr.slice(0, 5);
-}
-
-function parseDays(daysStr) {
-  if (!daysStr) return [];
-
-  const dayMap = {
-    'monday': 'Monday', 'mon': 'Monday', 'm': 'Monday',
-    'tuesday': 'Tuesday', 'tue': 'Tuesday', 't': 'Tuesday',
-    'wednesday': 'Wednesday', 'wed': 'Wednesday', 'w': 'Wednesday',
-    'thursday': 'Thursday', 'thu': 'Thursday', 'th': 'Thursday', 'r': 'Thursday',
-    'friday': 'Friday', 'fri': 'Friday', 'f': 'Friday',
-    'saturday': 'Saturday', 'sat': 'Saturday', 's': 'Saturday',
-    'sunday': 'Sunday', 'sun': 'Sunday', 'u': 'Sunday'
-  };
-
-  const days = [];
-  const separators = /[;,/\s]+/;
-  const parts = daysStr.toLowerCase().split(separators).filter(p => p.trim());
-
-  parts.forEach(part => {
-    const day = dayMap[part.trim()];
-    if (day && !days.includes(day)) {
-      days.push(day);
-    }
-  });
-
-  return days;
-}
-
-function showCsvPreview(classes, format = 'File') {
-  document.getElementById('classCount').textContent = classes.length;
-  const preview = document.getElementById('csvPreview');
-
-  preview.innerHTML = `
+function showImportPreview(classes, format) {
+  document.getElementById('csvPreviewContent').innerHTML = `
     <p style="margin-bottom: 15px; color: var(--text-secondary);">Imported ${classes.length} class(es) from ${format}</p>
     <table class="csv-table">
       <thead>
@@ -676,42 +396,43 @@ function showCsvPreview(classes, format = 'File') {
       </tbody>
     </table>
   `;
-
   openModal('csvPreviewModal');
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+function confirmImport() {
+  appData.classes.push(...pendingImportClasses);
+  saveData();
+  renderClasses();
+  closeModal('csvPreviewModal');
+  pendingImportClasses = [];
 }
 
 // ==================== RENDER FUNCTIONS ====================
 function renderAll() {
   renderDashboard();
   renderClasses();
+  renderCalendar();
   renderAssignments();
   renderExams();
   renderGrades();
-  renderCalendar();
-  renderNotes();
   renderTasks();
+  renderNotes();
+  renderFlashcards();
   updateClassSelects();
 }
 
 function renderDashboard() {
   // Today's date
   const today = new Date();
-  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  document.getElementById('todayDate').textContent = today.toLocaleDateString('en-US', options);
+  document.getElementById('todayDate').textContent = today.toLocaleDateString('en-US', { 
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+  });
 
-  // Today's schedule
+  // Today's classes
   const currentDay = today.toLocaleDateString('en-US', { weekday: 'long' });
-  const currentTime = today.toTimeString().slice(0, 5);
-  
-  const todaysClasses = appData.classes.filter(cls => 
-    cls.days.includes(currentDay)
-  ).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const todaysClasses = appData.classes
+    .filter(cls => cls.days.includes(currentDay))
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
   const scheduleContainer = document.getElementById('todaySchedule');
   if (todaysClasses.length === 0) {
@@ -728,17 +449,34 @@ function renderDashboard() {
     `).join('');
   }
 
-  // Upcoming assignments
-  const upcomingAssignments = appData.assignments
+  // Study stats
+  const studyStats = Analytics.calculateStudyStats(appData.studySessions || []);
+  document.getElementById('totalStudyHours').textContent = studyStats.totalHours;
+  document.getElementById('currentStreak').textContent = studyStats.streak;
+  document.getElementById('completedToday').textContent = studyStats.sessionsToday;
+
+  // Grade overview
+  if (appData.grades.length > 0) {
+    const avg = (appData.grades.reduce((sum, g) => sum + g.grade, 0) / appData.grades.length).toFixed(1);
+    document.getElementById('gradeOverview').innerHTML = `
+      <div style="text-align: center;">
+        <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary-color);">${avg}%</div>
+        <div style="color: var(--text-secondary);">Overall Average</div>
+      </div>
+    `;
+  }
+
+  // Upcoming deadlines
+  const upcoming = appData.assignments
     .filter(a => !a.completed && a.dueDate)
     .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
     .slice(0, 5);
 
-  const assignmentsContainer = document.getElementById('upcomingAssignments');
-  if (upcomingAssignments.length === 0) {
-    assignmentsContainer.innerHTML = '<p class="empty-state">No upcoming assignments</p>';
+  const deadlinesContainer = document.getElementById('upcomingDeadlines');
+  if (upcoming.length === 0) {
+    deadlinesContainer.innerHTML = '<p class="empty-state">No upcoming deadlines</p>';
   } else {
-    assignmentsContainer.innerHTML = upcomingAssignments.map(a => `
+    deadlinesContainer.innerHTML = upcoming.map(a => `
       <div class="assignment-item priority-${a.priority || 'medium'}" style="margin-bottom: 8px;">
         <div>
           <strong>${escapeHtml(a.title)}</strong>
@@ -748,16 +486,13 @@ function renderDashboard() {
     `).join('');
   }
 
-  // Study streak
-  const streakCount = document.getElementById('streakCount');
-  if (streakCount) {
-    streakCount.textContent = appData.settings.streak || 0;
-  }
+  // Streak
+  document.getElementById('streakCount').textContent = studyStats.streak;
 }
 
 function renderClasses() {
   const grid = document.getElementById('classesGrid');
-
+  
   if (appData.classes.length === 0) {
     grid.innerHTML = '<p class="empty-state">No classes yet. Click "Add Class" to get started!</p>';
     return;
@@ -785,10 +520,76 @@ function renderClasses() {
   updateClassSelects();
 }
 
+function renderCalendar() {
+  const container = document.getElementById('calendarContainer');
+  const monthYear = document.getElementById('currentMonthYear');
+  
+  const year = currentCalendarDate.getFullYear();
+  const month = currentCalendarDate.getMonth();
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+    'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  monthYear.textContent = `${monthNames[month]} ${year}`;
+  
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startingDay = firstDay.getDay();
+  const totalDays = lastDay.getDate();
+  const today = new Date();
+  const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+
+  // Get events
+  const events = [];
+  appData.classes.forEach(cls => {
+    cls.days.forEach(dayName => {
+      const dayNum = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(dayName);
+      for (let d = 1; d <= totalDays; d++) {
+        if (new Date(year, month, d).getDay() === dayNum) {
+          events.push({ date: d, title: cls.name, time: cls.startTime, color: cls.color, type: 'class' });
+        }
+      }
+    });
+  });
+
+  let html = '<div class="calendar-grid">';
+  html += '<div class="calendar-weekday">Sun</div><div class="calendar-weekday">Mon</div>';
+  html += '<div class="calendar-weekday">Tue</div><div class="calendar-weekday">Wed</div>';
+  html += '<div class="calendar-weekday">Thu</div><div class="calendar-weekday">Fri</div>';
+  html += '<div class="calendar-weekday">Sat</div>';
+  
+  for (let i = 0; i < startingDay; i++) {
+    html += '<div class="calendar-day empty"></div>';
+  }
+  
+  for (let d = 1; d <= totalDays; d++) {
+    const dayEvents = events.filter(e => e.date === d);
+    const isToday = isCurrentMonth && d === today.getDate();
+    
+    html += `<div class="calendar-day ${isToday ? 'today' : ''}">
+      <div class="calendar-day-number">${d}</div>
+      <div class="calendar-events">`;
+    
+    dayEvents.slice(0, 3).forEach(e => {
+      html += `<div class="calendar-event" style="background: ${e.color};" title="${e.title} at ${e.time}">
+        ${e.type === 'class' ? '📖' : '📋'} ${e.title}
+      </div>`;
+    });
+    
+    if (dayEvents.length > 3) {
+      html += `<div class="calendar-more">+${dayEvents.length - 3} more</div>`;
+    }
+    
+    html += '</div></div>';
+  }
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
 function renderAssignments(filter = 'all') {
   const list = document.getElementById('assignmentsList');
-  
   let filtered = appData.assignments;
+  
   if (filter === 'pending') filtered = filtered.filter(a => !a.completed);
   if (filter === 'completed') filtered = filtered.filter(a => a.completed);
 
@@ -805,7 +606,7 @@ function renderAssignments(filter = 'all') {
           <strong>${escapeHtml(a.title)}</strong>
           <div style="font-size: 0.85rem; color: var(--text-secondary);">
             ${cls ? `📚 ${escapeHtml(cls.name)} • ` : ''}
-            Due: ${a.dueDate} ${a.dueTime ? 'at ' + a.dueTime : ''}
+            Due: ${a.dueDate}
           </div>
         </div>
         <div style="display: flex; gap: 8px;">
@@ -820,17 +621,11 @@ function renderAssignments(filter = 'all') {
 }
 
 function renderExams() {
-  const list = document.getElementById('examsList');
   const countdown = document.getElementById('examsCountdown');
-  
-  if (appData.exams.length === 0) {
-    list.innerHTML = '<p class="empty-state">No exams scheduled</p>';
-    countdown.innerHTML = '';
-    return;
-  }
-
-  // Countdown cards for upcoming exams
+  const list = document.getElementById('examsList');
   const today = new Date();
+
+  // Countdown cards
   const upcomingExams = appData.exams
     .filter(e => e.date && new Date(e.date) >= today)
     .sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -847,39 +642,35 @@ function renderExams() {
     `;
   }).join('');
 
-  // Full list
-  list.innerHTML = appData.exams.map(exam => {
-    const cls = appData.classes.find(c => c.id === exam.classId);
-    return `
+  // List
+  if (appData.exams.length === 0) {
+    list.innerHTML = '<p class="empty-state">No exams scheduled</p>';
+  } else {
+    list.innerHTML = appData.exams.map(exam => `
       <div class="assignment-item">
         <div>
           <strong>${escapeHtml(exam.title)}</strong>
           <div style="font-size: 0.85rem; color: var(--text-secondary);">
-            ${cls ? `📚 ${escapeHtml(cls.name)} • ` : ''}
             📅 ${exam.date} ${exam.time ? 'at ' + exam.time : ''}
-            ${exam.location ? ` • 📍 ${escapeHtml(exam.location)}` : ''}
           </div>
         </div>
         <button class="btn btn-danger" onclick="deleteExam('${exam.id}')">Delete</button>
       </div>
-    `;
-  }).join('');
+    `).join('');
+  }
 }
 
 function renderGrades() {
-  const list = document.getElementById('gradesList');
   const summary = document.getElementById('gradesSummary');
-  
+  const list = document.getElementById('gradesList');
+
   if (appData.grades.length === 0) {
-    list.innerHTML = '<p class="empty-state">No grades recorded</p>';
     summary.innerHTML = '';
+    list.innerHTML = '<p class="empty-state">No grades recorded</p>';
     return;
   }
 
-  // Calculate average
-  const total = appData.grades.reduce((sum, g) => sum + g.grade, 0);
-  const avg = (total / appData.grades.length).toFixed(1);
-
+  const avg = (appData.grades.reduce((sum, g) => sum + g.grade, 0) / appData.grades.length).toFixed(1);
   summary.innerHTML = `
     <div class="grade-summary-card">
       <div class="grade-value">${avg}%</div>
@@ -891,149 +682,56 @@ function renderGrades() {
     </div>
   `;
 
-  list.innerHTML = appData.grades.map(g => {
-    const cls = appData.classes.find(c => c.id === g.classId);
+  list.innerHTML = appData.grades.map(g => `
+    <div class="assignment-item">
+      <div>
+        <strong>${escapeHtml(g.name)}</strong>
+        <div style="font-size: 0.85rem; color: var(--text-secondary);">📅 ${g.date}</div>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">${g.grade}%</span>
+        <button class="btn btn-danger" onclick="deleteGrade('${g.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTasks() {
+  const board = document.getElementById('kanbanBoard');
+  
+  if (appData.tasks.length === 0) {
+    board.innerHTML = '<p class="empty-state">No tasks yet. Click "+ Add Task" to create one!</p>';
+    return;
+  }
+
+  const columns = TasksKanban.defaultColumns;
+  
+  board.innerHTML = '<div class="kanban-columns">' + columns.map(col => {
+    const tasks = appData.tasks.filter(t => t.status === col.id);
     return `
-      <div class="assignment-item">
-        <div>
-          <strong>${escapeHtml(g.name)}</strong>
-          <div style="font-size: 0.85rem; color: var(--text-secondary);">
-            ${cls ? `📚 ${escapeHtml(cls.name)} • ` : ''}
-            📅 ${g.date}
-          </div>
+      <div class="kanban-column" style="border-top-color: ${col.color}">
+        <div class="kanban-column-header">
+          <span>${col.icon}</span>
+          <h3>${col.name}</h3>
+          <span class="kanban-count">${tasks.length}</span>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <span style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">${g.grade}%</span>
-          <button class="btn btn-danger" onclick="deleteGrade('${g.id}')">Delete</button>
+        <div class="kanban-cards">
+          ${tasks.map(task => `
+            <div class="kanban-card priority-${task.priority || 'medium'}">
+              <div class="kanban-card-title">${escapeHtml(task.title)}</div>
+              ${task.dueDate ? `<div class="kanban-card-due">📅 ${task.dueDate}</div>` : ''}
+              <div class="kanban-card-actions">
+                <button class="btn-icon-sm" onclick="moveTask('${task.id}', 'prev')">←</button>
+                <button class="btn-icon-sm" onclick="toggleTaskComplete('${task.id}')">${task.completed ? '✓' : '○'}</button>
+                <button class="btn-icon-sm" onclick="moveTask('${task.id}', 'next')">→</button>
+                <button class="btn-icon-sm" onclick="deleteTask('${task.id}')">×</button>
+              </div>
+            </div>
+          `).join('')}
         </div>
       </div>
     `;
-  }).join('');
-}
-
-// ==================== CALENDAR ====================
-let currentCalendarDate = new Date();
-
-function renderCalendar() {
-  const container = document.getElementById('calendarContainer');
-  const monthYear = document.getElementById('currentMonthYear');
-  
-  const year = currentCalendarDate.getFullYear();
-  const month = currentCalendarDate.getMonth();
-  
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-    'July', 'August', 'September', 'October', 'November', 'December'];
-  
-  monthYear.textContent = `${monthNames[month]} ${year}`;
-  
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startingDay = firstDay.getDay();
-  const totalDays = lastDay.getDate();
-  
-  const today = new Date();
-  const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
-  
-  // Get all events for this month
-  const events = [];
-  appData.classes.forEach(cls => {
-    cls.days.forEach(dayName => {
-      const dayNum = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(dayName);
-      for (let d = 1; d <= totalDays; d++) {
-        const date = new Date(year, month, d);
-        if (date.getDay() === dayNum) {
-          events.push({
-            date: d,
-            title: cls.name,
-            time: cls.startTime,
-            color: cls.color || '#667eea',
-            type: 'class'
-          });
-        }
-      }
-    });
-  });
-  
-  appData.exams.forEach(exam => {
-    const examDate = new Date(exam.date);
-    if (examDate.getMonth() === month && examDate.getFullYear() === year) {
-      events.push({
-        date: examDate.getDate(),
-        title: exam.title,
-        time: exam.time || 'All day',
-        color: '#f56565',
-        type: 'exam'
-      });
-    }
-  });
-  
-  appData.assignments.forEach(a => {
-    if (!a.completed) {
-      const dueDate = new Date(a.dueDate);
-      if (dueDate.getMonth() === month && dueDate.getFullYear() === year) {
-        events.push({
-          date: dueDate.getDate(),
-          title: a.title,
-          time: 'Due',
-          color: '#ed8936',
-          type: 'assignment'
-        });
-      }
-    }
-  });
-  
-  let html = '<div class="calendar-grid">';
-  html += '<div class="calendar-weekday">Sun</div>';
-  html += '<div class="calendar-weekday">Mon</div>';
-  html += '<div class="calendar-weekday">Tue</div>';
-  html += '<div class="calendar-weekday">Wed</div>';
-  html += '<div class="calendar-weekday">Thu</div>';
-  html += '<div class="calendar-weekday">Fri</div>';
-  html += '<div class="calendar-weekday">Sat</div>';
-  
-  // Empty cells for days before the first day
-  for (let i = 0; i < startingDay; i++) {
-    html += '<div class="calendar-day empty"></div>';
-  }
-  
-  // Day cells
-  for (let d = 1; d <= totalDays; d++) {
-    const dayEvents = events.filter(e => e.date === d);
-    const isToday = isCurrentMonth && d === today.getDate();
-    const dateObj = new Date(year, month, d);
-    const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    
-    html += `<div class="calendar-day ${isToday ? 'today' : ''}" title="${dateStr}">
-      <div class="calendar-day-number">${d}</div>
-      <div class="calendar-events">`;
-    
-    dayEvents.slice(0, 4).forEach(e => {
-      html += `<div class="calendar-event" style="background: ${e.color};" title="${e.title} at ${e.time}">
-        ${e.type === 'class' ? '📖' : e.type === 'exam' ? '📋' : '📝'} ${e.title}
-      </div>`;
-    });
-    
-    if (dayEvents.length > 4) {
-      html += `<div class="calendar-more">+${dayEvents.length - 4} more</div>`;
-    }
-    
-    html += '</div></div>';
-  }
-  
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-function setupCalendarNavigation() {
-  document.getElementById('prevMonth')?.addEventListener('click', () => {
-    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-    renderCalendar();
-  });
-
-  document.getElementById('nextMonth')?.addEventListener('click', () => {
-    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-    renderCalendar();
-  });
+  }).join('') + '</div>';
 }
 
 function renderNotes() {
@@ -1044,63 +742,141 @@ function renderNotes() {
     return;
   }
 
-  grid.innerHTML = appData.notes.map(note => {
-    const cls = appData.classes.find(c => c.id === note.classId);
+  grid.innerHTML = appData.notes.map(note => `
+    <div class="note-card" onclick="viewNote('${note.id}')">
+      <h4>${escapeHtml(note.title)}</h4>
+      <p>${escapeHtml(note.content.substring(0, 100))}${note.content.length > 100 ? '...' : ''}</p>
+      <div class="note-meta">
+        ${new Date(note.createdAt).toLocaleDateString()}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderFlashcards() {
+  const grid = document.getElementById('decksGrid');
+  
+  if (appData.flashcards.length === 0) {
+    grid.innerHTML = '<p class="empty-state">No flashcard decks yet. Click "+ Create Deck" to start!</p>';
+    return;
+  }
+
+  grid.innerHTML = appData.flashcards.map(deck => {
+    const stats = Flashcards.calculateDeckStats(deck);
     return `
-      <div class="note-card">
-        <h4>${escapeHtml(note.title)}</h4>
-        <p>${escapeHtml(note.content)}</p>
-        <div class="note-meta">
-          ${cls ? `📚 ${escapeHtml(cls.name)} • ` : ''}
-          ${new Date(note.createdAt).toLocaleDateString()}
+      <div class="deck-card">
+        <h3>${escapeHtml(deck.name)}</h3>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">${stats.total} cards</p>
+        <div class="deck-stats">
+          <span class="deck-stat">🆕 ${stats.new} new</span>
+          <span class="deck-stat">📚 ${stats.learning} learning</span>
+          <span class="deck-stat">✅ ${stats.mastered} mastered</span>
+        </div>
+        <div class="deck-actions">
+          <button class="btn btn-primary" onclick="studyDeck('${deck.id}')">Study</button>
+          <button class="btn btn-secondary" onclick="editDeck('${deck.id}')">Edit</button>
         </div>
       </div>
     `;
   }).join('');
 }
 
-function renderTasks() {
-  const list = document.getElementById('tasksList');
-  
-  if (appData.tasks.length === 0) {
-    list.innerHTML = '<p class="empty-state">No tasks yet</p>';
-    return;
+function renderAnalytics() {
+  const gradeStats = Analytics.calculateGradeStats(appData.grades || []);
+  const studyStats = Analytics.calculateStudyStats(appData.studySessions || []);
+  const assignmentStats = Analytics.calculateAssignmentStats(appData.assignments || []);
+
+  // Study time chart
+  if (studyStats.weeklyChart.length > 0) {
+    Charts.createBarChart('studyTimeChart', studyStats.weeklyChart, {
+      width: 350,
+      height: 200,
+      showValues: true
+    });
   }
 
-  list.innerHTML = appData.tasks.map(task => `
-    <div class="task-item">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask('${task.id}')" style="width: 20px; height: 20px;">
-        <div>
-          <strong style="${task.completed ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${escapeHtml(task.title)}</strong>
-          ${task.dueDate ? `<div style="font-size: 0.85rem; color: var(--text-secondary);">Due: ${task.dueDate}</div>` : ''}
-        </div>
+  // Grade distribution
+  if (appData.grades.length > 0) {
+    const distribution = GradeAnalytics.generateDistribution(appData.grades);
+    Charts.createBarChart('gradeDistributionChart', distribution.map(d => ({
+      label: d.range,
+      value: d.count
+    })), {
+      width: 350,
+      height: 200
+    });
+  }
+
+  // Class performance
+  if (gradeStats.byClass && Object.keys(gradeStats.byClass).length > 0) {
+    const classData = Object.values(gradeStats.byClass).map(c => ({
+      label: c.className.substring(0, 15),
+      value: Math.round(c.average)
+    }));
+    Charts.createBarChart('classPerformanceChart', classData, {
+      width: 350,
+      height: 200
+    });
+  }
+
+  // Assignment stats
+  document.getElementById('assignmentStats').innerHTML = `
+    <div class="analytics-grid">
+      <div class="analytics-card-mini">
+        <div class="analytics-value">${assignmentStats.total}</div>
+        <div class="analytics-label">Total</div>
       </div>
-      <button class="btn btn-danger" onclick="deleteTask('${task.id}')">Delete</button>
+      <div class="analytics-card-mini">
+        <div class="analytics-value">${assignmentStats.completed}</div>
+        <div class="analytics-label">Completed</div>
+      </div>
+      <div class="analytics-card-mini">
+        <div class="analytics-value">${assignmentStats.pending}</div>
+        <div class="analytics-label">Pending</div>
+      </div>
+      <div class="analytics-card-mini">
+        <div class="analytics-value">${assignmentStats.completionRate}%</div>
+        <div class="analytics-label">Rate</div>
+      </div>
     </div>
+  `;
+}
+
+function renderSettings() {
+  document.getElementById('themeSelect').value = appData.settings.theme || 'auto';
+  document.getElementById('accentColor').value = appData.settings.accentColor || '#667eea';
+  document.getElementById('enableNotifications').checked = appData.settings.notifications !== false;
+  document.getElementById('pomodoroDuration').value = appData.settings.pomodoroDuration || 25;
+  document.getElementById('shortBreakDuration').value = appData.settings.shortBreakDuration || 5;
+  document.getElementById('longBreakDuration').value = appData.settings.longBreakDuration || 15;
+
+  // Theme presets
+  const presets = Settings.getThemePresets();
+  document.getElementById('themePresets').innerHTML = Object.entries(presets).map(([key, value]) => `
+    <button class="theme-preset-btn" style="background: ${value.color}" onclick="setThemeColor('${value.color}')">
+      ${value.name}
+    </button>
   `).join('');
 }
 
+// ==================== UTILITY FUNCTIONS ====================
 function updateClassSelects() {
-  const selects = [
-    'assignmentClassSelect',
-    'examClassSelect',
-    'noteClassSelect',
-    'gradeClassSelect'
-  ];
-
-  selects.forEach(selectId => {
-    const select = document.getElementById(selectId);
+  const selects = ['assignmentClassSelect', 'examClassSelect', 'gradeClassSelect'];
+  selects.forEach(id => {
+    const select = document.getElementById(id);
     if (select) {
-      const currentValue = select.value;
       select.innerHTML = '<option value="">Select Class</option>' +
         appData.classes.map(cls => `<option value="${cls.id}">${escapeHtml(cls.name)}</option>`).join('');
-      select.value = currentValue;
     }
   });
 }
 
-// ==================== DELETE FUNCTIONS ====================
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 function deleteClass(id) {
   if (confirm('Delete this class?')) {
     appData.classes = appData.classes.filter(c => c.id !== id);
@@ -1118,9 +894,9 @@ function deleteAssignment(id) {
 }
 
 function toggleAssignment(id) {
-  const assignment = appData.assignments.find(a => a.id === id);
-  if (assignment) {
-    assignment.completed = !assignment.completed;
+  const a = appData.assignments.find(a => a.id === id);
+  if (a) {
+    a.completed = !a.completed;
     saveData();
     renderAssignments();
   }
@@ -1150,8 +926,23 @@ function deleteTask(id) {
   }
 }
 
-function toggleTask(id) {
-  const task = appData.tasks.find(t => t.id === id);
+function moveTask(taskId, direction) {
+  const task = appData.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  const columns = TasksKanban.defaultColumns.map(c => c.id);
+  const currentIndex = columns.indexOf(task.status);
+  const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+  if (newIndex >= 0 && newIndex < columns.length) {
+    task.status = columns[newIndex];
+    saveData();
+    renderTasks();
+  }
+}
+
+function toggleTaskComplete(taskId) {
+  const task = appData.tasks.find(t => t.id === taskId);
   if (task) {
     task.completed = !task.completed;
     saveData();
@@ -1159,12 +950,71 @@ function toggleTask(id) {
   }
 }
 
+function viewNote(id) {
+  const note = appData.notes.find(n => n.id === id);
+  if (note) {
+    document.getElementById('viewNoteTitle').textContent = note.title;
+    document.getElementById('noteViewContent').innerHTML = `
+      <div style="white-space: pre-wrap;">${escapeHtml(note.content)}</div>
+    `;
+    openModal('viewNoteModal');
+  }
+}
+
+function studyDeck(id) {
+  const deck = appData.flashcards.find(d => d.id === id);
+  if (deck) {
+    alert('Study mode coming soon! Add cards to this deck first.');
+  }
+}
+
+function editDeck(id) {
+  alert('Edit deck functionality coming soon!');
+}
+
+function setThemeColor(color) {
+  appData.settings.accentColor = color;
+  document.documentElement.style.setProperty('--primary-color', color);
+  document.getElementById('accentColor').value = color;
+  saveData();
+}
+
+// ==================== THEME ====================
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const newTheme = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  appData.settings.theme = newTheme;
+  document.getElementById('themeToggle').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+  saveData();
+}
+
+function applySettings() {
+  const theme = appData.settings.theme || 'auto';
+  const accentColor = appData.settings.accentColor || '#667eea';
+
+  if (theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.getElementById('themeToggle').textContent = '☀️';
+  } else if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.getElementById('themeToggle').textContent = '🌙';
+  } else {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    document.getElementById('themeToggle').textContent = prefersDark ? '☀️' : '🌙';
+  }
+
+  document.documentElement.style.setProperty('--primary-color', accentColor);
+  timerSeconds = (appData.settings.pomodoroDuration || 25) * 60;
+  updateTimerDisplay();
+}
+
 // ==================== TIMER ====================
 function setupTimer() {
-  const timerModes = document.querySelectorAll('.timer-mode');
-  timerModes.forEach(mode => {
+  document.querySelectorAll('.timer-mode').forEach(mode => {
     mode.addEventListener('click', () => {
-      timerModes.forEach(m => m.classList.remove('active'));
+      document.querySelectorAll('.timer-mode').forEach(m => m.classList.remove('active'));
       mode.classList.add('active');
       timerMode = mode.dataset.mode;
       setTimerDuration(timerMode);
@@ -1174,17 +1024,15 @@ function setupTimer() {
   document.getElementById('mainTimerStart')?.addEventListener('click', toggleTimer);
   document.getElementById('mainTimerPause')?.addEventListener('click', pauseTimer);
   document.getElementById('mainTimerReset')?.addEventListener('click', resetTimer);
-
-  // Quick timer
-  document.getElementById('quickTimerStart')?.addEventListener('click', toggleQuickTimer);
-  document.getElementById('quickTimerReset')?.addEventListener('click', resetQuickTimer);
+  document.getElementById('quickTimerStart')?.addEventListener('click', toggleTimer);
+  document.getElementById('quickTimerReset')?.addEventListener('click', resetTimer);
 }
 
 function setTimerDuration(mode) {
   const durations = {
-    pomodoro: 25 * 60,
-    short: 5 * 60,
-    long: 15 * 60
+    pomodoro: (appData.settings.pomodoroDuration || 25) * 60,
+    short: (appData.settings.shortBreakDuration || 5) * 60,
+    long: (appData.settings.longBreakDuration || 15) * 60
   };
   timerSeconds = durations[mode] || 25 * 60;
   updateTimerDisplay();
@@ -1194,17 +1042,13 @@ function updateTimerDisplay() {
   const minutes = Math.floor(timerSeconds / 60);
   const seconds = timerSeconds % 60;
   const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  
   document.getElementById('mainTimerDisplay').textContent = display;
   document.getElementById('quickTimerDisplay').textContent = display;
 }
 
 function toggleTimer() {
-  if (timerRunning) {
-    pauseTimer();
-  } else {
-    startTimer();
-  }
+  if (timerRunning) pauseTimer();
+  else startTimer();
 }
 
 function startTimer() {
@@ -1215,12 +1059,10 @@ function startTimer() {
   timerInterval = setInterval(() => {
     timerSeconds--;
     updateTimerDisplay();
-    
     if (timerSeconds <= 0) {
       clearInterval(timerInterval);
       timerRunning = false;
       document.getElementById('mainTimerStart').textContent = 'Start';
-      // Play sound or show notification
       alert('Timer complete!');
     }
   }, 1000);
@@ -1237,118 +1079,124 @@ function resetTimer() {
   setTimerDuration(timerMode);
 }
 
-function toggleQuickTimer() {
-  if (timerRunning) {
-    pauseTimer();
-  } else {
-    startTimer();
-  }
-}
-
-function resetQuickTimer() {
-  pauseTimer();
-  setTimerDuration(timerMode);
-}
-
-// ==================== THEME ====================
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
-  const newTheme = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', newTheme);
-  appData.settings.theme = newTheme;
-  document.getElementById('themeToggle').textContent = newTheme === 'dark' ? '☀️' : '🌙';
-  saveData();
-}
-
-function applyTheme() {
-  const theme = appData.settings.theme || 'auto';
-  const accentColor = appData.settings.accentColor || '#667eea';
+// ==================== COMMAND PALETTE ====================
+function setupCommandPalette() {
+  CommandPalette.init();
   
-  if (theme === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    document.getElementById('themeToggle').textContent = '☀️';
-  } else if (theme === 'light') {
-    document.documentElement.setAttribute('data-theme', 'light');
-    document.getElementById('themeToggle').textContent = '🌙';
-  } else {
-    // Auto - check system preference
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-    document.getElementById('themeToggle').textContent = prefersDark ? '☀️' : '🌙';
-  }
-  
-  document.documentElement.style.setProperty('--primary-color', accentColor);
-  document.getElementById('accentColor').value = accentColor;
-  document.getElementById('themeSelect').value = theme;
-  document.getElementById('enableNotifications').checked = appData.settings.notifications;
-}
+  document.getElementById('commandInput')?.addEventListener('input', (e) => {
+    const results = CommandPalette.search(e.target.value);
+    CommandPalette.renderCommands(results);
+  });
 
-// ==================== EXPORT/IMPORT ====================
-async function exportData() {
-  if (window.electronAPI) {
-    const content = await window.electronAPI.exportData();
-    const result = await window.electronAPI.showSaveDialog(content, 'student-data.json');
-    if (result.success) {
-      alert('Data exported successfully!');
+  document.getElementById('commandInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const selected = document.querySelector('.command-item.selected');
+      if (selected) selected.click();
     }
-  } else {
-    const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'student-data.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      // Handle navigation
+    }
+  });
+}
+
+function openCommandPalette() {
+  CommandPalette.open();
+}
+
+// ==================== NOTIFICATIONS ====================
+function startReminderChecker() {
+  setInterval(() => {
+    if (!appData.settings.notifications) return;
+    
+    const now = new Date();
+    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
+    const currentTime = now.toTimeString().slice(0, 5);
+
+    appData.classes.forEach(cls => {
+      if (cls.days.includes(currentDay) && cls.startTime <= currentTime) {
+        const reminderTime = new Date();
+        reminderTime.setHours(
+          parseInt(cls.startTime.split(':')[0]),
+          parseInt(cls.startTime.split(':')[1]) - (cls.reminderMinutes || 15),
+          0
+        );
+
+        if (now >= reminderTime && now < new Date(reminderTime.getTime() + 60000)) {
+          sendNotification(`Class Reminder: ${cls.name}`, `${cls.name} starts at ${cls.startTime}`);
+        }
+      }
+    });
+  }, 30000);
+}
+
+function sendNotification(title, body) {
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '/icon-192.png' });
   }
 }
 
-async function importData() {
-  if (window.electronAPI) {
-    const result = await window.electronAPI.showOpenDialog();
-    if (result.success) {
+// ==================== DATA EXPORT/IMPORT ====================
+function exportData() {
+  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'student-data.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
       try {
-        const imported = JSON.parse(result.content);
-        appData = imported;
-        await saveData();
+        appData = JSON.parse(event.target.result);
+        saveData();
         renderAll();
+        applySettings();
         alert('Data imported successfully!');
       } catch (err) {
         alert('Error importing data: ' + err.message);
       }
-    }
-  }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
-async function clearAllData() {
-  if (confirm('⚠️ Are you sure you want to delete ALL data? This cannot be undone!')) {
-    if (confirm('Really sure? This will delete all classes, assignments, exams, grades, notes, and tasks.')) {
+function clearAllData() {
+  if (confirm('⚠️ Delete ALL data? This cannot be undone!')) {
+    if (confirm('Really sure?')) {
       appData = {
-        classes: [],
-        assignments: [],
-        exams: [],
-        grades: [],
-        notes: [],
-        tasks: [],
-        settings: {
-          theme: 'auto',
-          accentColor: '#667eea',
-          notifications: true,
-          defaultReminderMinutes: 15
-        }
+        classes: [], assignments: [], exams: [], grades: [], notes: [], tasks: [], flashcards: [], studySessions: [],
+        settings: { theme: 'auto', accentColor: '#667eea', notifications: true, defaultReminderMinutes: 15,
+          pomodoroDuration: 25, shortBreakDuration: 5, longBreakDuration: 15 }
       };
-      await saveData();
+      saveData();
       renderAll();
-      applyTheme();
+      applySettings();
       alert('All data cleared.');
     }
   }
 }
 
-// Make delete functions globally available
+// Make functions globally available
 window.deleteClass = deleteClass;
 window.deleteAssignment = deleteAssignment;
 window.toggleAssignment = toggleAssignment;
 window.deleteExam = deleteExam;
 window.deleteGrade = deleteGrade;
 window.deleteTask = deleteTask;
-window.toggleTask = toggleTask;
+window.moveTask = moveTask;
+window.toggleTaskComplete = toggleTaskComplete;
+window.viewNote = viewNote;
+window.studyDeck = studyDeck;
+window.editDeck = editDeck;
+window.setThemeColor = setThemeColor;

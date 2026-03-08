@@ -1077,3 +1077,332 @@ form {
     font-size: 3rem;
   }
 }
+
+/* ==================== KANBAN BOARD ==================== */
+.kanban-board {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding: 20px 0;
+}
+
+.kanban-columns {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+}
+
+.kanban-column {
+  flex: 1;
+  min-width: 280px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border-top: 4px solid;
+  box-shadow: var(--shadow-sm);
+}
+
+.kanban-column-header {
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.kanban-column-header h3 {
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.kanban-count {
+  background: var(--bg-tertiary);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.kanban-cards {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 200px;
+}
+
+.kanban-card {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition);
+}
+
+.kanban-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.kanban-card-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.kanban-card-due {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.kanban-card-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.btn-icon-sm {
+  background: var(--bg-secondary);
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.btn-icon-sm:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+/* ==================== ANALYTICS ==================== */
+.analytics-dashboard {
+  display: grid;
+  gap: 20px;
+}
+
+.analytics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.analytics-card {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.analytics-card h3 {
+  font-size: 1rem;
+  margin-bottom: 15px;
+  color: var(--text-secondary);
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.analytics-card-mini {
+  text-align: center;
+  padding: 15px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+}
+
+.analytics-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.analytics-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ==================== COMMAND PALETTE ==================== */
+.command-palette {
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.command-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.search-icon {
+  font-size: 1.2rem;
+}
+
+#commandInput {
+  flex: 1;
+  border: none;
+  font-size: 1.1rem;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+#commandInput:focus {
+  outline: none;
+}
+
+.command-results {
+  overflow-y: auto;
+  padding: 10px 0;
+  max-height: 400px;
+}
+
+.command-category {
+  padding: 8px 20px 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.command-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.command-item:hover,
+.command-item.selected {
+  background: var(--bg-tertiary);
+}
+
+.command-icon {
+  font-size: 1.2rem;
+}
+
+.command-info {
+  flex: 1;
+}
+
+.command-name {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.command-description {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.command-shortcut {
+  font-size: 0.75rem;
+  background: var(--bg-tertiary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+
+/* ==================== FLASHCARDS ==================== */
+.decks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.deck-card {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.deck-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.deck-card h3 {
+  margin-bottom: 8px;
+}
+
+.deck-stats {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+
+.deck-stat {
+  font-size: 0.8rem;
+  background: var(--bg-tertiary);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.deck-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ==================== THEME PRESETS ==================== */
+.theme-presets {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.theme-preset-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.theme-preset-btn:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+}
+
+/* ==================== STAT ITEM ==================== */
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}

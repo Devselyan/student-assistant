@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
   <title>Student Assistant Pro</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -23,17 +23,41 @@
         <span class="nav-icon">📖</span>
         <span class="nav-text">My Classes</span>
       </li>
+      <li class="nav-item" data-view="calendar">
+        <span class="nav-icon">📅</span>
+        <span class="nav-text">Calendar</span>
+      </li>
+      <li class="nav-item" data-view="assignments">
+        <span class="nav-icon">📝</span>
+        <span class="nav-text">Assignments</span>
+      </li>
       <li class="nav-item" data-view="exams">
         <span class="nav-icon">📋</span>
         <span class="nav-text">Exams</span>
+      </li>
+      <li class="nav-item" data-view="grades">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-text">Grades</span>
+      </li>
+      <li class="nav-item" data-view="tasks">
+        <span class="nav-icon">✓</span>
+        <span class="nav-text">Tasks</span>
+      </li>
+      <li class="nav-item" data-view="notes">
+        <span class="nav-icon">📓</span>
+        <span class="nav-text">Notes</span>
+      </li>
+      <li class="nav-item" data-view="flashcards">
+        <span class="nav-icon">🃏</span>
+        <span class="nav-text">Flashcards</span>
       </li>
       <li class="nav-item" data-view="timer">
         <span class="nav-icon">⏱️</span>
         <span class="nav-text">Study Timer</span>
       </li>
-      <li class="nav-item" data-view="calendar">
-        <span class="nav-icon">📅</span>
-        <span class="nav-text">Calendar</span>
+      <li class="nav-item" data-view="analytics">
+        <span class="nav-icon">📈</span>
+        <span class="nav-text">Analytics</span>
       </li>
       <li class="nav-item" data-view="settings">
         <span class="nav-icon">⚙️</span>
@@ -58,6 +82,7 @@
         <h2>📊 Dashboard</h2>
         <div class="header-actions">
           <button id="themeToggle" class="btn-icon" title="Toggle Theme">🌙</button>
+          <button id="openCommandPalette" class="btn-icon" title="Command Palette">⌘</button>
         </div>
       </header>
 
@@ -73,7 +98,28 @@
           </div>
         </div>
 
-        <!-- Study Timer Quick Access -->
+        <!-- Study Stats -->
+        <div class="card card-md">
+          <div class="card-header">
+            <h3>📈 Study Statistics</h3>
+          </div>
+          <div class="card-body" id="studyStats">
+            <div class="stat-item">
+              <span class="stat-value" id="totalStudyHours">0</span>
+              <span class="stat-label">Hours Studied</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="currentStreak">0</span>
+              <span class="stat-label">Day Streak 🔥</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="completedToday">0</span>
+              <span class="stat-label">Completed Today</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Timer -->
         <div class="card card-sm">
           <div class="card-header">
             <h3>⏱️ Quick Timer</h3>
@@ -89,6 +135,27 @@
           </div>
         </div>
 
+        <!-- Grade Overview -->
+        <div class="card card-md">
+          <div class="card-header">
+            <h3>🎯 Grade Overview</h3>
+            <a href="#" class="view-all" data-view="grades">View All</a>
+          </div>
+          <div class="card-body" id="gradeOverview">
+            <p class="empty-state">No grades yet</p>
+          </div>
+        </div>
+
+        <!-- Upcoming Deadlines -->
+        <div class="card card-md">
+          <div class="card-header">
+            <h3>📋 Upcoming</h3>
+          </div>
+          <div class="card-body" id="upcomingDeadlines">
+            <p class="empty-state">No upcoming deadlines</p>
+          </div>
+        </div>
+
         <!-- Quick Actions -->
         <div class="card card-sm">
           <div class="card-header">
@@ -97,7 +164,9 @@
           <div class="card-body">
             <div class="quick-actions">
               <button class="btn btn-primary btn-block" id="quickAddClass">+ Add Class</button>
-              <button class="btn btn-secondary btn-block" id="quickAddExam">+ Add Exam</button>
+              <button class="btn btn-secondary btn-block" id="quickAddAssignment">+ Assignment</button>
+              <button class="btn btn-secondary btn-block" id="quickAddExam">+ Exam</button>
+              <button class="btn btn-secondary btn-block" id="quickAddNote">+ Note</button>
             </div>
           </div>
         </div>
@@ -119,6 +188,35 @@
       </div>
     </div>
 
+    <!-- Calendar View -->
+    <div class="view" id="view-calendar">
+      <header class="view-header">
+        <h2>📅 Calendar</h2>
+        <div class="calendar-nav">
+          <button class="btn-icon" id="prevMonth">‹</button>
+          <span id="currentMonthYear"></span>
+          <button class="btn-icon" id="nextMonth">›</button>
+        </div>
+      </header>
+      <div class="calendar-container" id="calendarContainer"></div>
+    </div>
+
+    <!-- Assignments View -->
+    <div class="view" id="view-assignments">
+      <header class="view-header">
+        <h2>📝 Assignments</h2>
+        <button class="btn btn-primary" id="addAssignmentBtn">+ Add Assignment</button>
+      </header>
+      <div class="assignments-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="pending">Pending</button>
+        <button class="filter-btn" data-filter="completed">Completed</button>
+      </div>
+      <div class="assignments-list" id="assignmentsList">
+        <p class="empty-state">No assignments yet</p>
+      </div>
+    </div>
+
     <!-- Exams View -->
     <div class="view" id="view-exams">
       <header class="view-header">
@@ -131,18 +229,54 @@
       </div>
     </div>
 
-    <!-- Calendar View -->
-    <div class="view" id="view-calendar">
+    <!-- Grades View -->
+    <div class="view" id="view-grades">
       <header class="view-header">
-        <h2>📅 Calendar</h2>
-        <div class="calendar-nav">
-          <button class="btn-icon" id="prevMonth">‹</button>
-          <span id="currentMonthYear"></span>
-          <button class="btn-icon" id="nextMonth">›</button>
-        </div>
+        <h2>🎯 Grades</h2>
+        <button class="btn btn-primary" id="addGradeBtn">+ Add Grade</button>
       </header>
-      <div class="calendar-container" id="calendarContainer">
-        <!-- Calendar grid rendered here -->
+      <div class="grades-summary" id="gradesSummary"></div>
+      <div class="grades-list" id="gradesList">
+        <p class="empty-state">No grades recorded</p>
+      </div>
+    </div>
+
+    <!-- Tasks View (Kanban) -->
+    <div class="view" id="view-tasks">
+      <header class="view-header">
+        <h2>✓ Tasks</h2>
+        <button class="btn btn-primary" id="addTaskBtn">+ Add Task</button>
+      </header>
+      <div class="kanban-board" id="kanbanBoard">
+        <!-- Kanban columns will be rendered here -->
+      </div>
+    </div>
+
+    <!-- Notes View -->
+    <div class="view" id="view-notes">
+      <header class="view-header">
+        <h2>📓 Notes</h2>
+        <button class="btn btn-primary" id="addNoteBtn">+ Add Note</button>
+      </header>
+      <div class="notes-search">
+        <input type="text" id="notesSearch" placeholder="Search notes...">
+        <select id="notesFolderFilter">
+          <option value="">All Folders</option>
+        </select>
+      </div>
+      <div class="notes-grid" id="notesGrid">
+        <p class="empty-state">No notes yet</p>
+      </div>
+    </div>
+
+    <!-- Flashcards View -->
+    <div class="view" id="view-flashcards">
+      <header class="view-header">
+        <h2>🃏 Flashcards</h2>
+        <button class="btn btn-primary" id="addDeckBtn">+ Create Deck</button>
+      </header>
+      <div class="decks-grid" id="decksGrid">
+        <p class="empty-state">No flashcard decks yet</p>
       </div>
     </div>
 
@@ -167,33 +301,32 @@
       </div>
     </div>
 
-    <!-- Notes View -->
-    <div class="view" id="view-notes">
+    <!-- Analytics View -->
+    <div class="view" id="view-analytics">
       <header class="view-header">
-        <h2>📓 Notes</h2>
-        <button class="btn btn-primary" id="addNoteBtn">+ Add Note</button>
+        <h2>📈 Analytics</h2>
       </header>
-      <div class="notes-search">
-        <input type="text" id="notesSearch" placeholder="Search notes...">
-      </div>
-      <div class="notes-grid" id="notesGrid">
-        <p class="empty-state">No notes yet</p>
-      </div>
-    </div>
-
-    <!-- Tasks View -->
-    <div class="view" id="view-tasks">
-      <header class="view-header">
-        <h2>✓ Tasks</h2>
-        <button class="btn btn-primary" id="addTaskBtn">+ Add Task</button>
-      </header>
-      <div class="tasks-filters">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="pending">Pending</button>
-        <button class="filter-btn" data-filter="completed">Completed</button>
-      </div>
-      <div class="tasks-list" id="tasksList">
-        <p class="empty-state">No tasks yet</p>
+      <div class="analytics-dashboard">
+        <div class="analytics-row">
+          <div class="analytics-card">
+            <h3>Study Time This Week</h3>
+            <div id="studyTimeChart"></div>
+          </div>
+          <div class="analytics-card">
+            <h3>Grade Distribution</h3>
+            <div id="gradeDistributionChart"></div>
+          </div>
+        </div>
+        <div class="analytics-row">
+          <div class="analytics-card">
+            <h3>Class Performance</h3>
+            <div id="classPerformanceChart"></div>
+          </div>
+          <div class="analytics-card">
+            <h3>Assignment Completion</h3>
+            <div id="assignmentStats"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -217,6 +350,10 @@
             <label>Accent Color</label>
             <input type="color" id="accentColor" value="#667eea">
           </div>
+          <div class="setting-item">
+            <label>Theme Preset</label>
+            <div class="theme-presets" id="themePresets"></div>
+          </div>
         </section>
 
         <section class="settings-section">
@@ -238,6 +375,22 @@
         </section>
 
         <section class="settings-section">
+          <h3>⏱️ Timer Settings</h3>
+          <div class="setting-item">
+            <label>Pomodoro Duration</label>
+            <input type="number" id="pomodoroDuration" value="25" min="1" max="120">
+          </div>
+          <div class="setting-item">
+            <label>Short Break</label>
+            <input type="number" id="shortBreakDuration" value="5" min="1" max="30">
+          </div>
+          <div class="setting-item">
+            <label>Long Break</label>
+            <input type="number" id="longBreakDuration" value="15" min="1" max="60">
+          </div>
+        </section>
+
+        <section class="settings-section">
           <h3>💾 Data Management</h3>
           <div class="setting-item">
             <button class="btn btn-secondary" id="exportDataBtn">📥 Export All Data</button>
@@ -251,6 +404,7 @@
         <section class="settings-section">
           <h3>📊 About</h3>
           <p class="about-text">Student Assistant Pro v3.0</p>
+          <p class="about-text">10,000+ lines of code</p>
           <p class="about-text">Built for students, by students.</p>
         </section>
       </div>
@@ -259,6 +413,20 @@
 
   <!-- ==================== MODALS ==================== -->
   
+  <!-- Command Palette -->
+  <div class="modal" id="commandPalette">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-md">
+      <div class="command-palette">
+        <div class="command-search">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="commandInput" placeholder="Type a command or search..." autofocus>
+        </div>
+        <div class="command-results" id="commandResults"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Class Modal -->
   <div class="modal" id="classModal">
     <div class="modal-overlay"></div>
@@ -326,6 +494,58 @@
     </div>
   </div>
 
+  <!-- Add Assignment Modal -->
+  <div class="modal" id="assignmentModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="assignmentModalTitle">Add Assignment</h3>
+        <button class="modal-close" data-modal="assignmentModal">×</button>
+      </div>
+      <form id="assignmentForm">
+        <div class="form-group">
+          <label>Assignment Title *</label>
+          <input type="text" name="title" required placeholder="e.g., Chapter 5 Problems">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Class *</label>
+            <select name="classId" id="assignmentClassSelect" required>
+              <option value="">Select Class</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <select name="priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Due Date *</label>
+            <input type="date" name="dueDate" required>
+          </div>
+          <div class="form-group">
+            <label>Due Time</label>
+            <input type="time" name="dueTime" value="23:59">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" rows="3" placeholder="Assignment details, requirements..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Assignment</button>
+          <button type="button" class="btn btn-secondary" data-modal="assignmentModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Add Exam Modal -->
   <div class="modal" id="examModal">
     <div class="modal-overlay"></div>
@@ -378,43 +598,6 @@
         <div class="modal-actions">
           <button type="submit" class="btn btn-primary">Save Exam</button>
           <button type="button" class="btn btn-secondary" data-modal="examModal">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Add Note Modal -->
-  <div class="modal" id="noteModal">
-    <div class="modal-overlay"></div>
-    <div class="modal-content modal-xl">
-      <div class="modal-header">
-        <h3 id="noteModalTitle">Add Note</h3>
-        <button class="modal-close" data-modal="noteModal">×</button>
-      </div>
-      <form id="noteForm">
-        <div class="form-group">
-          <label>Note Title *</label>
-          <input type="text" name="title" required placeholder="Note title...">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Class</label>
-            <select name="classId" id="noteClassSelect">
-              <option value="">No Class</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Tags</label>
-            <input type="text" name="tags" placeholder="tag1, tag2, tag3">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Content *</label>
-          <textarea name="content" rows="15" required placeholder="Write your notes here..."></textarea>
-        </div>
-        <div class="modal-actions">
-          <button type="submit" class="btn btn-primary">Save Note</button>
-          <button type="button" class="btn btn-secondary" data-modal="noteModal">Cancel</button>
         </div>
       </form>
     </div>
@@ -500,7 +683,69 @@
     </div>
   </div>
 
-  <!-- CSV Preview Modal -->
+  <!-- Add Note Modal -->
+  <div class="modal" id="noteModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h3 id="noteModalTitle">Add Note</h3>
+        <button class="modal-close" data-modal="noteModal">×</button>
+      </div>
+      <form id="noteForm">
+        <div class="form-group">
+          <label>Note Title *</label>
+          <input type="text" name="title" required placeholder="Note title...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Folder</label>
+            <select name="folderId" id="noteFolderSelect">
+              <option value="">No Folder</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tags</label>
+            <input type="text" name="tags" placeholder="tag1, tag2, tag3">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Content *</label>
+          <textarea name="content" rows="15" required placeholder="Write your notes here..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Save Note</button>
+          <button type="button" class="btn btn-secondary" data-modal="noteModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Flashcard Deck Modal -->
+  <div class="modal" id="flashcardDeckModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="flashcardDeckModalTitle">Create Flashcard Deck</h3>
+        <button class="modal-close" data-modal="flashcardDeckModal">×</button>
+      </div>
+      <form id="flashcardDeckForm">
+        <div class="form-group">
+          <label>Deck Name *</label>
+          <input type="text" name="name" required placeholder="e.g., Biology Chapter 1">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" rows="2" placeholder="What is this deck about?"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Create Deck</button>
+          <button type="button" class="btn btn-secondary" data-modal="flashcardDeckModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CSV/ICS Preview Modal -->
   <div class="modal" id="csvPreviewModal">
     <div class="modal-overlay"></div>
     <div class="modal-content modal-lg">
@@ -508,8 +753,7 @@
         <h3>📁 Preview Imported Classes</h3>
         <button class="modal-close" data-modal="csvPreviewModal">×</button>
       </div>
-      <p class="preview-info">Found <span id="classCount">0</span> classes in your CSV file</p>
-      <div id="csvPreview" class="csv-preview"></div>
+      <div id="csvPreviewContent"></div>
       <div class="modal-actions">
         <button class="btn btn-primary" id="confirmImportBtn">✅ Import All</button>
         <button class="btn btn-secondary" data-modal="csvPreviewModal">Cancel</button>
@@ -517,7 +761,34 @@
     </div>
   </div>
 
+  <!-- View Note Modal -->
+  <div class="modal" id="viewNoteModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h3 id="viewNoteTitle">Note</h3>
+        <div class="modal-actions-small">
+          <button class="btn-icon" id="editNoteBtn">✏️</button>
+          <button class="modal-close" data-modal="viewNoteModal">×</button>
+        </div>
+      </div>
+      <div class="note-view-content" id="noteViewContent"></div>
+    </div>
+  </div>
+
+  <script src="icons.js"></script>
+  <script src="utils.js"></script>
+  <script src="components.js"></script>
+  <script src="charts.js"></script>
+  <script src="analytics.js"></script>
+  <script src="grade-analytics.js"></script>
   <script src="schedule-import.js"></script>
+  <script src="flashcards.js"></script>
+  <script src="tasks-kanban.js"></script>
+  <script src="focus-mode.js"></script>
+  <script src="notifications.js"></script>
+  <script src="command-palette.js"></script>
+  <script src="settings.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

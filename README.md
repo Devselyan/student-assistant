@@ -1,116 +1,64 @@
-# 📚 Class Reminder - Web App
+# Student Assistant Pro - Web Version
 
-**Safe, simple, and free to share!**
-
-## 🌐 Try It Locally
-
-```bash
-cd /Users/dev/student-assistant-web
-python3 -m http.server 8080
-```
-
-Then open: `http://localhost:8080`
-
----
-
-## 📤 Deploy to GitHub Pages (Free!)
-
-### Step 1: Push to GitHub
-
-```bash
-cd /Users/dev/student-assistant-web
-git init
-git add .
-git commit -m "Class Reminder Web App"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/class-reminder.git
-git push -u origin main
-```
-
-### Step 2: Enable GitHub Pages
-
-1. Go to your repo on GitHub
-2. Click **Settings** → **Pages**
-3. Source: **Deploy from branch** → **main** → **root**
-4. Click **Save**
-
-### Step 3: Share the Link!
-
-Your app will be live at:
-```
-https://YOUR_USERNAME.github.io/class-reminder/
-```
-
----
-
-## ✅ What Your Friend Gets
-
-- **One link** - no download, no install
-- **Works on any device** - Mac, Windows, iPhone, Android
-- **Auto-updates** - when you push changes
-- **Safe** - runs in browser, no warnings
-- **Free hosting** - GitHub Pages is free forever
-
----
-
-## 🔄 Update the App
-
-```bash
-# Edit files
-git add .
-git commit -m "Added new feature"
-git push
-```
-
-**Your friend sees updates automatically!**
-
----
-
-## 📱 Install as App (Optional)
-
-Friends can "install" it:
-
-**Chrome/Edge:**
-1. Click menu (⋮) → **Save and share** → **Create shortcut**
-2. Check "Open as window"
-
-**iPhone:**
-1. Safari → Share → **Add to Home Screen**
-
-**Android:**
-1. Chrome → Menu → **Install app**
-
----
+A complete student productivity app that runs in your browser.
 
 ## Features
 
-- ✅ Add classes manually
-- ✅ Import from CSV
-- ✅ Export to calendar (.ics)
-- ✅ Browser notifications
-- ✅ Works offline (PWA)
-- ✅ Mobile responsive
+- 📖 **My Classes** - Track all your classes with times, locations, and days
+- 📝 **Assignments** - Manage assignments with priorities and due dates
+- 📋 **Exams** - Track exams with countdown timers
+- 🎯 **Grades** - Record and track your grades
+- ⏱️ **Study Timer** - Pomodoro timer for focused study sessions
+- 📓 **Notes** - Take and organize class notes
+- ✓ **Tasks** - Manage your to-do list
+- 📊 **Dashboard** - Overview of today's schedule and upcoming work
 
----
+## Usage
 
-## Privacy
+### Option 1: Open Directly
+Just open `index.html` in your browser. All data is saved to localStorage.
 
-- All data stored **locally** in browser
-- No server, no tracking, no data collection
-- Clear browser data = all data gone
+### Option 2: Use a Local Server (Recommended)
+```bash
+# Using Python 3
+python3 -m http.server 8000
 
----
+# Using Node.js
+npx serve .
 
-## Files
+# Using PHP
+php -S localhost:8000
+```
 
-| File | Purpose |
-|------|---------|
-| `index.html` | Main page |
-| `styles.css` | Styling |
-| `renderer.js` | App logic (no Electron!) |
-| `manifest.json` | PWA config |
-| `sw.js` | Service worker (offline) |
+Then open `http://localhost:8000` in your browser.
 
----
+### Option 3: Deploy to GitHub Pages
+1. Push this folder to a GitHub repository
+2. Go to Settings > Pages
+3. Select the branch and save
+4. Your app will be live at `https://yourusername.github.io/repo-name`
 
-**That's it! Share the link and you're done!**
+## Import from School Website
+
+1. Export your schedule as `.ics` or `.csv` from your school website
+2. Click "📁 Import CSV/ICS" in the My Classes view
+3. Select your file
+4. Preview and confirm the import
+
+## Share with Friends
+
+Send them this folder or the GitHub Pages link. All data stays in their browser (localStorage).
+
+## Data Storage
+
+- All data is stored locally in your browser's localStorage
+- Use "📥 Export All Data" to backup
+- Use "📤 Import Data" to restore from backup
+- Data is NOT synced across devices
+
+## PWA Support
+
+This app works as a Progressive Web App:
+- Works offline after first load
+- Can be installed to home screen on mobile
+- Sends class reminders (with permission)

@@ -1,7 +1,7 @@
 {
-  "name": "class-reminder-app",
-  "version": "1.0.0",
-  "description": "Never miss a class again - smart calendar reminders for students",
+  "name": "student-assistant-pro",
+  "version": "3.0.0",
+  "description": "Complete student productivity app - classes, assignments, exams, notes, timer and more",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -10,48 +10,29 @@
   },
   "keywords": [
     "electron",
+    "student",
     "calendar",
     "reminders",
-    "student",
-    "classes"
+    "productivity",
+    "education"
   ],
   "author": "Student Assistant",
   "license": "MIT",
   "devDependencies": {
     "electron": "^40.8.0",
-    "electron-builder": "^26.8.1",
-    "eslint": "^10.0.3"
+    "electron-builder": "^26.8.1"
   },
   "build": {
-    "appId": "com.studentassistant.classreminder",
-    "productName": "Class Reminder",
+    "appId": "com.studentassistant.pro",
+    "productName": "Student Assistant Pro",
     "mac": {
       "category": "public.app-category.education",
-      "icon": "icon.icns",
-      "target": [
-        "dmg",
-        "zip"
-      ]
+      "target": ["dmg", "zip"]
     },
     "files": [
       "**/*",
       "!**/*.md",
       "!node_modules/electron-builder/**/*"
-    ],
-    "dmg": {
-      "title": "Class Reminder",
-      "contents": [
-        {
-          "x": 130,
-          "y": 220
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
-    }
+    ]
   }
 }
